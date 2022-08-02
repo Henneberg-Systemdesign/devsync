@@ -168,3 +168,13 @@ subdirectories.
 
 You can enable log output (only makes sense if **-u** is not set)
 using RUST_LOG environment variable.
+
+# REPORTING BUGS
+
+Bugs can be reported on
+<https://github.com/Henneberg-Systemdesign/devsync>, License GPLv3+:
+GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
+
+# COPYRIGHT
+
+Copyright © 2022 Jochen Henneberg.
