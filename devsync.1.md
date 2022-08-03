@@ -27,6 +27,10 @@ session. If started in a directory with session file all options are
 read from there if none is given otherwise the session file is
 updated.
 
+**devsync** will create a '.devsync.log log file in the target
+directory which log entries for runtime errors as well as for each
+skipped directory. The logs are dropped when a new session is started.
+
 # GENERAL OPTIONS
 
 **-h**, **\-\-help**
