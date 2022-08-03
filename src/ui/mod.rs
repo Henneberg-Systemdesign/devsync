@@ -6,7 +6,7 @@ use std::fs;
 use std::sync::Arc;
 
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
+    event::{read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -111,7 +111,16 @@ impl TermUi {
         }
         self.terminal
             .draw(|f| Self::render(f, &self.jobs, &self.runtime, 100))?;
-        std::thread::sleep(std::time::Duration::new(1, 0));
+
+        // quit on 'q' or 'Q'
+        loop {
+            if let Ok(Event::Key(e)) = read() {
+                if e.code == KeyCode::Char('q') || e.code == KeyCode::Char('Q') {
+                    break;
+                }
+            }
+        }
+
         Ok(())
     }
 
