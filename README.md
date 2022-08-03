@@ -22,6 +22,18 @@ updated.
 directory which log entries for runtime errors as well as for each
 skipped directory. The logs are dropped when a new session is started.
 
+## Terminal ui
+**devsync** can provide a simple terminal interface when started with
+'-u'. The ui has a progress bar which is of limited help because it
+only tells you about the number of directories that are already known
+and how many have been processed. However, it still moves forward most
+of the time and gives at least a hint that something is happening. It
+also shows you the backup jobs that are currently running and all
+runtime issues that happen along the way.
+
+It will remain active when the backup process has been completed and
+waits for a press on 'q' or 'Q' to terminate.
+
 ## Details
 Read the manpage for more information or look at the output of -h.
 
