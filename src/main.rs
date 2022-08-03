@@ -34,6 +34,8 @@ pub struct Config {
     /// If copying shall happen in archive mode (preserving
     /// timestamps, ownership and permissions)
     archive: bool,
+    /// Backup files and directories owned by process user only.
+    owned: bool,
     /// Files and directories to be ignored.
     ignore: Vec<String>,
 }
@@ -85,6 +87,7 @@ fn main() {
     opts.optopt("t", "target", "Target directory", "DIR");
     opts.optflag("d", "delete", "Remove extraneous files");
     opts.optflag("a", "archive", "Preserve timestamps");
+    opts.optflag("o", "owned", "Only backup files and directories we own");
     opts.optflag("u", "ui", "Show terminal user interface");
     opts.optopt("i", "ignore", "List of directory or file names to ignore", "LIST_OF_PATHS");
     opts.optopt("j", "jobs", "Parallel jobs (1 - 255, default is 10)", "NUM");
@@ -164,10 +167,11 @@ fn main() {
     }
 
     let cfg = Arc::new(Config {
-        jobs: args.opt_get_default("jobs", DEFAULT_JOBS).unwrap(),
-        delete: args.opt_present("delete"),
-        archive: args.opt_present("archive"),
-        ignore: match args.opt_str("ignore") {
+        jobs: args.opt_get_default("j", DEFAULT_JOBS).unwrap(),
+        delete: args.opt_present("d"),
+        archive: args.opt_present("a"),
+        owned: args.opt_present("o"),
+        ignore: match args.opt_str("i") {
             Some(a) => a.split(',').map(String::from).collect(),
             _ => vec![],
         },

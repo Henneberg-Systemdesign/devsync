@@ -72,6 +72,7 @@ impl Scan {
             &mut d.dirs,
             &mut d.files,
             Some(&self.config.ignore),
+            self.config.owned,
         )?;
 
         // if we shall remove extraneous files and directories find
@@ -82,6 +83,7 @@ impl Scan {
                 &mut d.ex_dirs,
                 &mut d.ex_files,
                 None,
+                false,
             )
             .is_ok()
         {

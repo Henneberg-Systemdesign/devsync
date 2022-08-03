@@ -72,16 +72,26 @@ pub fn save_dirs_and_files(
     dirs: &mut Vec<DirEntry>,
     files: &mut Vec<DirEntry>,
     filter: Option<&[String]>,
+    owned: bool,
 ) -> Result<(), SyncError> {
     for e in fs::read_dir(p)? {
         match e {
             Ok(e) => {
+                // is this ours
+                if owned {
+                    if let Ok(false) = test_file_owned(e.path().as_path()) {
+                        trace!("File {:?} not owned by us", e);
+                        continue;
+                    }
+                }
+
                 // first check if we should ignore this
                 if let Some(f) = filter {
                     if f
                         .iter()
                         .any(|p| e.path().as_path().to_str().unwrap().ends_with(p))
                     {
+                        trace!("File {:?} filtered", e);
                         continue;
                     }
                 }
@@ -206,8 +216,23 @@ pub fn set_file_permissions(s: &Path, t: &Path) -> Result<(), SyncError> {
     }
 }
 
-use std::os::unix::io::AsRawFd;
+/// Test if file or directory are owned by this user.
+pub fn test_file_owned(f: &Path) -> Result<bool, SyncError> {
+    cfg_match! {
+        unix => test_file_owned_unix(f),
+        _ => unimplemented!("Support for this OS is imcomplete"),
+    }
+}
+
 #[cfg(all(unix))]
+use std::os::unix::fs::MetadataExt;
+fn test_file_owned_unix(f: &Path) -> Result<bool, SyncError> {
+    let file_uid = fs::metadata(f)?.uid();
+    let my_uid = users::get_current_uid();
+    Ok(file_uid == my_uid)
+}
+
+use std::os::unix::io::AsRawFd;
 use std::time;
 fn set_file_timestamps_unix(s: &Path, t: &Path) -> bool {
     if let Ok(m) = fs::metadata(s) {
