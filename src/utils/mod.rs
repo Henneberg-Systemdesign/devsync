@@ -4,12 +4,14 @@
 
 use std::fs;
 use std::fs::DirEntry;
+use std::io::Write;
 use std::option::Option;
 use std::path::Path;
 
 use cfg_match::cfg_match;
 use log::trace;
 
+use super::scanner::stats;
 use super::{ARGS_FILE, LOG_FILE};
 
 #[derive(Debug)]
@@ -50,6 +52,15 @@ impl std::fmt::Display for SyncError {
             SyncError::Io(ref io) => std::fmt::Display::fmt(io, fmt),
         }
     }
+}
+
+pub fn log_stats_info(log_file: &mut fs::File, prefix: &str, i: &stats::Info) {
+    writeln!(
+        log_file,
+        "{} {}({}): {}",
+        prefix, i.name, i.category, i.desc
+    )
+    .expect("Cannot write to log file");
 }
 
 /// Create directory but fist remove all entries recursively.

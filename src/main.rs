@@ -203,22 +203,15 @@ fn main() {
                         info!("Stats: Job {:?} on {:?}", t.val, &t.info)
                     }
                     stats::Command::Log => {
-                        let i = t.info.unwrap();
-                        writeln!(
-                            &mut log_file,
-                            "Log from flavour {}({}): {}",
-                            i.name, i.category, i.desc
-                        )
-                        .expect("Cannot write to log file");
+                        utils::log_stats_info(&mut log_file, "Log from flavour", &t.info.unwrap())
                     }
                     stats::Command::Runtime => {
                         let i = t.info.unwrap();
-                        let msg = format!(
+                        utils::log_stats_info(&mut log_file, "Runtime from flavour", &i);
+                        warn!(
                             "Runtime from flavour {}({}): {}",
                             i.name, i.category, i.desc
                         );
-                        writeln!(&mut log_file, "{}", &msg).expect("Cannot write to log file");
-                        warn!("{}", msg);
                     }
                     _ => info!("Stats: {:?}", stats),
                 }
