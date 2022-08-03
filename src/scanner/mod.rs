@@ -41,6 +41,7 @@ impl Scanner {
             scan: Arc::new(
                 Scan::new(src, target, stats, cfg)
                     .register(Box::new(dir::Yocto::template(args)))
+                    .register(Box::new(dir::Sysroot::template(args)))
                     .register(Box::new(dir::Cmake::template(args)))
                     .register(Box::new(dir::Flutter::template(args)))
                     .register(Box::new(dir::Meson::template(args)))
