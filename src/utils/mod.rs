@@ -274,3 +274,202 @@ fn set_file_timestamps_unix(s: &Path, t: &Path) -> bool {
     }
     false
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn path() -> PathBuf {
+        let mut r = PathBuf::new();
+        r.push(env!("CARGO_MANIFEST_DIR"));
+        r.push("tests");
+        r
+    }
+
+    fn sample_dir(p: &Path) {
+        create_dir_save(p, true).expect("Failed to create path");
+        create_dir_save(&p.join("dir_d"), false).expect("Failed to create path");
+        create_dir_save(&p.join("dir_f"), false).expect("Failed to create path");
+        let _ = fs::File::create(p.join("file_a"));
+        let _ = fs::File::create(p.join("file_b"));
+        let _ = fs::File::create(p.join("file_c"));
+        let _ = fs::File::create(p.join("file_e"));
+        let _ = fs::File::create(p.join("dir_d").join("file_a"));
+        let _ = fs::File::create(p.join("dir_d").join("file_b"));
+    }
+
+    #[test]
+    fn test_create_dir_save() {
+        let mut p = path();
+        p.push("create_dir_save");
+        create_dir_save(&p, false).expect("Failed to create path");
+        assert!(p.exists());
+        let _ = fs::File::create(p.join("some_file"));
+        create_dir_save(&p, true).expect("Failed to create path");
+        assert!(!p.join("some_file").exists());
+
+        // cleanup
+        let _ = fs::remove_dir_all(p);
+    }
+
+    #[test]
+    fn test_save_dirs_and_files() {
+        let mut p = path();
+        p.push("save_dirs_and_files");
+        sample_dir(&p);
+        let mut f: Vec<DirEntry> = Vec::new();
+        let mut d: Vec<DirEntry> = Vec::new();
+        let _ = save_dirs_and_files(&p, &mut d, &mut f, None, false);
+        assert!(f.len() == 4);
+        assert!(d.len() == 2);
+        f.clear();
+        d.clear();
+        let _ = save_dirs_and_files(&p, &mut d, &mut f, None, true);
+        assert!(f.len() == 4);
+        assert!(d.len() == 2);
+        f.clear();
+        d.clear();
+        save_dirs_and_files(
+            &p,
+            &mut d,
+            &mut f,
+            Some(&["file_b".to_string(), "d".to_string()]),
+            true,
+        )
+        .expect("Failed to scan path");
+        assert!(f.len() == 3);
+        assert!(d.len() == 1);
+
+        // cleanup
+        let _ = fs::remove_dir_all(p);
+    }
+
+    #[test]
+    fn test_rm_dirs_and_files() {
+        let mut p = path();
+        p.push("rm_dirs_and_files");
+        sample_dir(&p);
+        assert!(p.join("file_a").exists());
+        let _ = rm_dirs_and_files(&p);
+        assert!(p.exists());
+        assert!(!p.join("file_a").exists());
+        assert!(!p.join("dir_d").exists());
+
+        // cleanup
+        let _ = fs::remove_dir_all(p);
+    }
+
+    #[test]
+    fn test_filter_dir_entries() {
+        let p = path();
+        sample_dir(&p.join("filter_dir_entries_1"));
+        sample_dir(&p.join("filter_dir_entries_2"));
+        let mut f1: Vec<DirEntry> = Vec::new();
+        let mut d1: Vec<DirEntry> = Vec::new();
+        let mut f2: Vec<DirEntry> = Vec::new();
+        let mut d2: Vec<DirEntry> = Vec::new();
+        let _ = save_dirs_and_files(
+            &p.join("filter_dir_entries_1"),
+            &mut d1,
+            &mut f1,
+            None,
+            true,
+        );
+        let _ = save_dirs_and_files(
+            &p.join("filter_dir_entries_2"),
+            &mut d2,
+            &mut f2,
+            None,
+            true,
+        );
+        filter_dir_entries(&f1, &mut f2);
+        filter_dir_entries(&d1, &mut d2);
+        assert!(f2.is_empty());
+        assert!(d2.is_empty());
+
+        // cleanup
+        let _ = fs::remove_dir_all(p.join("filter_dir_entries_1"));
+        let _ = fs::remove_dir_all(p.join("filter_dir_entries_2"));
+    }
+
+    #[test]
+    fn test_cp_r_and_diff() {
+        let p = path();
+        sample_dir(&p.join("cp_r_1"));
+        // ensure timestamps differs
+        std::thread::sleep(std::time::Duration::new(1, 0));
+
+        let _ = create_dir_save(&p.join("cp_r_2"), true);
+        let _ = cp_r(
+            &p.join("cp_r_1"),
+            &p.join("cp_r_2"),
+            Path::new("file_a"),
+            false,
+        );
+        assert!(p.join("cp_r_2").join("file_a").exists());
+        for f in fs::read_dir(p.join("cp_r_2")).unwrap() {
+            let ff = f.unwrap();
+            let t = ff.file_type().unwrap();
+            if t.is_file() {
+                assert!(diff(&p.join("cp_r_2"), &p.join("cp_r_1"), &ff));
+            }
+        }
+
+        let _ = cp_r(
+            &p.join("cp_r_1"),
+            &p.join("cp_r_2"),
+            Path::new("file_a"),
+            true,
+        );
+        assert!(p.join("cp_r_2").join("file_a").exists());
+        for f in fs::read_dir(p.join("cp_r_2")).unwrap() {
+            let ff = f.unwrap();
+            let t = ff.file_type().unwrap();
+            if t.is_file() {
+                assert!(!diff(&p.join("cp_r_2"), &p.join("cp_r_1"), &ff));
+            }
+        }
+
+        // cleanup
+        let _ = fs::remove_dir_all(p.join("cp_r_1"));
+        let _ = fs::remove_dir_all(p.join("cp_r_2"));
+    }
+
+    #[test]
+    fn test_cp_r_d() {
+        let p = path();
+        sample_dir(&p.join("cp_r_d_1"));
+
+        let _ = cp_r_d(
+            &p.join("cp_r_d_1"),
+            &p.join("cp_r_d_2"),
+            Path::new("file_a"),
+            false,
+        );
+        assert!(p.join("cp_r_d_2").join("file_a").exists());
+
+        // cleanup
+        let _ = fs::remove_dir_all(p.join("cp_r_d_1"));
+        let _ = fs::remove_dir_all(p.join("cp_r_d_2"));
+    }
+
+    #[test]
+    fn test_cp() {
+        let p = path();
+        sample_dir(&p.join("cp_1"));
+        sample_dir(&p.join("cp_2"));
+
+        let _ = cp(
+            &p.join("cp_1").join("file_a"),
+            &p.join("cp_2").join("file_a"),
+            &p.join("cp_1").join("file_a"),
+            false,
+        );
+        assert!(p.join("cp_2").join("file_a").exists());
+
+        // cleanup
+        let _ = fs::remove_dir_all(p.join("cp_1"));
+        let _ = fs::remove_dir_all(p.join("cp_2"));
+    }
+}
