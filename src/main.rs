@@ -23,6 +23,7 @@ mod utils;
 
 const DEFAULT_JOBS: u8 = 10;
 const ARGS_FILE: &str = ".devsync.session";
+const LOG_FILE: &str = ".devsync.log";
 
 /// Global configuration date.
 #[derive(Debug, Clone)]
@@ -180,11 +181,12 @@ fn main() {
 
     let mut stats = stats::Stats::default();
     let scanner = Scanner::new(&args, &src, &target, &stats, cfg.clone());
+    let mut log_file = fs::File::create(&target.join(LOG_FILE)).expect("Cannot create log file");
 
     let stats_th = if args.opt_present("u") {
         let mut ui = ui::TermUi::new(stats, cfg).unwrap();
         thread::spawn(move || {
-            ui.run().expect("Failed to run ui");
+            ui.run(log_file).expect("Failed to run ui");
         })
     } else {
         // track statistics updates
@@ -195,12 +197,23 @@ fn main() {
                     stats::Command::Job => {
                         info!("Stats: Job {:?} on {:?}", t.val, &t.info)
                     }
-                    stats::Command::Runtime => {
+                    stats::Command::Log => {
                         let i = t.info.unwrap();
-                        warn!(
-                            "Runtime from flavour {}({}): {}",
+                        writeln!(
+                            &mut log_file,
+                            "Log from flavour {}({}): {}",
                             i.name, i.category, i.desc
                         )
+                        .expect("Cannot write to log file");
+                    }
+                    stats::Command::Runtime => {
+                        let i = t.info.unwrap();
+                        let msg = format!(
+                            "Runtime from flavour {}({}): {}",
+                            i.name, i.category, i.desc
+                        );
+                        writeln!(&mut log_file, "{}", &msg).expect("Cannot write to log file");
+                        warn!("{}", msg);
                     }
                     _ => info!("Stats: {:?}", stats),
                 }

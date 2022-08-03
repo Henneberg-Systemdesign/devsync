@@ -22,14 +22,16 @@ pub enum Command {
     Error,
     /// Signals non-fatal runtime error.
     Runtime,
+    /// Signals entries for the log file.
+    Log,
     /// Signals that processing is complete.
     Complete,
     /// Signals job details for job id.
     Job,
 }
 
-/// Detailed command info, used for [Command::Runtime] and
-/// [Command::Job] transports.
+/// Detailed command info, used for [Command::Runtime], [Command::Log]
+/// and [Command::Job] transports.
 #[derive(Debug, Clone)]
 pub struct Info {
     /// Flavour category.

@@ -106,6 +106,11 @@ impl Scan {
             .unwrap();
 
         if flav.skip() {
+            self.send_log(stats::Info {
+                category: flav.category(),
+                name: flav.name().to_string(),
+                desc: format!("Skipped {:?}", p),
+            });
             // if we shall skip and extraneous directories shall be
             // removed do that
             if self.config.delete && d.target_path.exists() {
@@ -156,6 +161,18 @@ impl Scan {
                 info: i,
             })
             .unwrap();
+    }
+
+    /// Helper function to send [stats::Command::Runtime] messages to
+    /// [stats::Stats].
+    pub fn send_log(&self, i: stats::Info) {
+        self.stats_chn
+            .send(stats::Transport {
+                cmd: stats::Command::Log,
+                val: 0,
+                info: Some(i),
+            })
+            .expect("Failed to send log");
     }
 
     fn process_flavour(&self, flav: Box<dyn dir::Flavour>, job: u8) -> Result<(), SyncError> {

@@ -10,7 +10,7 @@ use std::path::Path;
 use cfg_match::cfg_match;
 use log::trace;
 
-use super::ARGS_FILE;
+use super::{ARGS_FILE, LOG_FILE};
 
 #[derive(Debug)]
 pub enum SyncError {
@@ -87,8 +87,7 @@ pub fn save_dirs_and_files(
 
                 // first check if we should ignore this
                 if let Some(f) = filter {
-                    if f
-                        .iter()
+                    if f.iter()
                         .any(|p| e.path().as_path().to_str().unwrap().ends_with(p))
                     {
                         trace!("File {:?} filtered", e);
@@ -97,7 +96,7 @@ pub fn save_dirs_and_files(
                 }
 
                 let t = e.file_type().unwrap();
-                if t.is_file() && e.file_name() != ARGS_FILE {
+                if t.is_file() && e.file_name() != ARGS_FILE && e.file_name() != LOG_FILE {
                     files.push(e);
                 } else if t.is_dir() && e.path() != p {
                     dirs.push(e);
@@ -116,7 +115,7 @@ pub fn rm_dirs_and_files(p: &Path) -> Result<(), SyncError> {
         match e {
             Ok(e) => {
                 let t = e.file_type().unwrap();
-                if t.is_file() && e.file_name() != ARGS_FILE {
+                if t.is_file() && e.file_name() != ARGS_FILE && e.file_name() != LOG_FILE {
                     fs::remove_file(e.path().as_path())?;
                 } else if t.is_dir() && e.path() != p {
                     fs::remove_dir_all(e.path().as_path())?;

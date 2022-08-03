@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::fs;
+use std::io::Write;
 use std::sync::Arc;
 
 use crossterm::{
@@ -78,7 +80,7 @@ impl TermUi {
 
     /// Run Ui updates and terminate once [stats::Stats] signals
     /// [stats::Command::Complete].
-    pub fn run(&mut self) -> Result<(), SyncError> {
+    pub fn run(&mut self, mut log_file: fs::File) -> Result<(), SyncError> {
         'main: loop {
             while let Ok(t) = self.stats.chn.1.try_recv() {
                 match self.stats.process(&t) {
@@ -86,7 +88,25 @@ impl TermUi {
                         self.jobs[t.val as usize] = t.info;
                         self.redraw = true;
                     }
-                    stats::Command::Runtime => self.runtime.push(t.info.unwrap()),
+                    stats::Command::Log => {
+                        let i = t.info.unwrap();
+                        writeln!(
+                            &mut log_file,
+                            "Log from flavour {}({}): {}",
+                            i.name, i.category, i.desc
+                        )
+                        .expect("Cannot write to log file");
+                    }
+                    stats::Command::Runtime => {
+                        let i = t.info.unwrap();
+                        writeln!(
+                            &mut log_file,
+                            "Runtime from flavour {}({}): {}",
+                            i.name, i.category, i.desc
+                        )
+                        .expect("Cannot write to log file");
+                        self.runtime.push(i);
+                    }
                     stats::Command::Complete => break 'main,
                     _ => (),
                 }
