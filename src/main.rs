@@ -86,7 +86,7 @@ fn main() {
     opts.optflag("d", "delete", "Remove extraneous files");
     opts.optflag("a", "archive", "Preserve timestamps");
     opts.optflag("u", "ui", "Show terminal user interface");
-    opts.optflag("i", "ignore", "List of directory or file names to ignore");
+    opts.optopt("i", "ignore", "List of directory or file names to ignore", "LIST_OF_PATHS");
     opts.optopt("j", "jobs", "Parallel jobs (1 - 255, default is 10)", "NUM");
 
     // we have to get the flavour specific options
