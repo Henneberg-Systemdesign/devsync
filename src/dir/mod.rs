@@ -19,6 +19,8 @@ use super::{stats, utils, Config};
 // specials
 pub mod yocto;
 pub use self::yocto::Yocto;
+pub mod sysroot;
+pub use self::sysroot::Sysroot;
 
 // build directories
 pub mod cmake;

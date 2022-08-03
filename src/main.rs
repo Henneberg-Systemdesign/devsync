@@ -94,6 +94,7 @@ fn main() {
 
     // we have to get the flavour specific options
     dir::Yocto::init_opts(&mut opts);
+    dir::Sysroot::init_opts(&mut opts);
     dir::Cmake::init_opts(&mut opts);
     dir::Flutter::init_opts(&mut opts);
     dir::Meson::init_opts(&mut opts);
