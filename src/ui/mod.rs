@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::fs;
 use std::sync::Arc;
 
 use crossterm::{
@@ -20,6 +21,7 @@ use tui::{
 };
 
 use super::scanner::stats;
+use super::utils;
 use super::utils::SyncError;
 use super::Config;
 
@@ -78,7 +80,7 @@ impl TermUi {
 
     /// Run Ui updates and terminate once [stats::Stats] signals
     /// [stats::Command::Complete].
-    pub fn run(&mut self) -> Result<(), SyncError> {
+    pub fn run(&mut self, mut log_file: fs::File) -> Result<(), SyncError> {
         'main: loop {
             while let Ok(t) = self.stats.chn.1.try_recv() {
                 match self.stats.process(&t) {
@@ -86,7 +88,14 @@ impl TermUi {
                         self.jobs[t.val as usize] = t.info;
                         self.redraw = true;
                     }
-                    stats::Command::Runtime => self.runtime.push(t.info.unwrap()),
+                    stats::Command::Log => {
+                        utils::log_stats_info(&mut log_file, "Log from flavour", &t.info.unwrap())
+                    }
+                    stats::Command::Runtime => {
+                        let i = t.info.unwrap();
+                        utils::log_stats_info(&mut log_file, "Runtime from flavour", &i);
+                        self.runtime.push(i);
+                    }
                     stats::Command::Complete => break 'main,
                     _ => (),
                 }

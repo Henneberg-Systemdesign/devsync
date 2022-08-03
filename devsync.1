@@ -37,6 +37,11 @@ The rationale is to save storage space and speed up the backup process.
 target directory which saves all current options about the sync session.
 If started in a directory with session file all options are read from
 there if none is given otherwise the session file is updated.
+.PP
+\f[B]devsync\f[R] will create a \[cq].devsync.log log file in the target
+directory which log entries for runtime errors as well as for each
+skipped directory.
+The logs are dropped when a new session is started.
 .SH GENERAL OPTIONS
 .TP
 \f[B]-h\f[R], \f[B]--help\f[R]

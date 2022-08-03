@@ -23,6 +23,7 @@ mod utils;
 
 const DEFAULT_JOBS: u8 = 10;
 const ARGS_FILE: &str = ".devsync.session";
+const LOG_FILE: &str = ".devsync.log";
 
 /// Global configuration date.
 #[derive(Debug, Clone)]
@@ -89,7 +90,12 @@ fn main() {
     opts.optflag("a", "archive", "Preserve timestamps");
     opts.optflag("o", "owned", "Only backup files and directories we own");
     opts.optflag("u", "ui", "Show terminal user interface");
-    opts.optopt("i", "ignore", "List of directory or file names to ignore", "LIST_OF_PATHS");
+    opts.optopt(
+        "i",
+        "ignore",
+        "List of directory or file names to ignore",
+        "LIST_OF_PATHS",
+    );
     opts.optopt("j", "jobs", "Parallel jobs (1 - 255, default is 10)", "NUM");
 
     // we have to get the flavour specific options
@@ -180,11 +186,12 @@ fn main() {
 
     let mut stats = stats::Stats::default();
     let scanner = Scanner::new(&args, &src, &target, &stats, cfg.clone());
+    let mut log_file = fs::File::create(&target.join(LOG_FILE)).expect("Cannot create log file");
 
     let stats_th = if args.opt_present("u") {
         let mut ui = ui::TermUi::new(stats, cfg).unwrap();
         thread::spawn(move || {
-            ui.run().expect("Failed to run ui");
+            ui.run(log_file).expect("Failed to run ui");
         })
     } else {
         // track statistics updates
@@ -195,12 +202,16 @@ fn main() {
                     stats::Command::Job => {
                         info!("Stats: Job {:?} on {:?}", t.val, &t.info)
                     }
+                    stats::Command::Log => {
+                        utils::log_stats_info(&mut log_file, "Log from flavour", &t.info.unwrap())
+                    }
                     stats::Command::Runtime => {
                         let i = t.info.unwrap();
+                        utils::log_stats_info(&mut log_file, "Runtime from flavour", &i);
                         warn!(
                             "Runtime from flavour {}({}): {}",
                             i.name, i.category, i.desc
-                        )
+                        );
                     }
                     _ => info!("Stats: {:?}", stats),
                 }
