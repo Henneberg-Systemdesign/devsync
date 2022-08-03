@@ -106,6 +106,11 @@ impl Scan {
             .unwrap();
 
         if flav.skip() {
+            // if we shall skip and extraneous directories shall be
+            // removed do that
+            if self.config.delete && d.target_path.exists() {
+                fs::remove_dir_all(d.target_path.as_path())?;
+            }
             self.skip_one();
             return Ok(());
         }
