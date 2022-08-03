@@ -76,6 +76,16 @@ types.
 :   Backup the build directories 'build' or 'BUILD', 'cache',
     sstate-cache' and 'buildhistory'.
 
+## Sysroot
+
+Sysroot directories are identified by the existence of directories
+'dev', 'usr', 'var' and 'bin'. By default they are ignored. Once a
+sysroot directory has been detected the subdirectories are not scanned
+for new types.
+
+**\-\-sysroot-sync**
+:   Enable backup for sysroot directories.
+
 # DIRECTORY CATEGORY 'BUILD':
 ## Cargo
 

@@ -85,6 +85,16 @@ Backup the `downloads' directory, by default this is ignored.
 \f[B]--yocto-build-sync\f[R]
 Backup the build directories `build' or `BUILD', `cache',
 sstate-cache\[cq] and `buildhistory'.
+.SS Sysroot
+.PP
+Sysroot directories are identified by the existence of directories
+`dev', `usr', `var' and `bin'.
+By default they are ignored.
+Once a sysroot directory has been detected the subdirectories are not
+scanned for new types.
+.TP
+\f[B]--sysroot-sync\f[R]
+Enable backup for sysroot directories.
 .SH DIRECTORY CATEGORY `BUILD':
 .SS Cargo
 .PP
