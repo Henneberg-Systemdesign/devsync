@@ -90,7 +90,12 @@ fn main() {
     opts.optflag("a", "archive", "Preserve timestamps");
     opts.optflag("o", "owned", "Only backup files and directories we own");
     opts.optflag("u", "ui", "Show terminal user interface");
-    opts.optopt("i", "ignore", "List of directory or file names to ignore", "LIST_OF_PATHS");
+    opts.optopt(
+        "i",
+        "ignore",
+        "List of directory or file names to ignore",
+        "LIST_OF_PATHS",
+    );
     opts.optopt("j", "jobs", "Parallel jobs (1 - 255, default is 10)", "NUM");
 
     // we have to get the flavour specific options
