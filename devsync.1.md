@@ -43,6 +43,9 @@ there if none is given otherwise the session file is updated.
 **-a**, **\-\-archive**
 :   Preserve timestamps, permissions and ownership.
 
+**-o**, **\-\-owned**
+:   Backup only files and directories that are owned by us.
+
 **-u**, **\-\-ui**
 :   Show terminal UI.
 
