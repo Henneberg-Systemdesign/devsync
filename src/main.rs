@@ -22,7 +22,7 @@ mod ui;
 mod utils;
 
 const DEFAULT_JOBS: u8 = 10;
-const ARGS_FILE: &str = ".devsync";
+const ARGS_FILE: &str = ".devsync.session";
 
 /// Global configuration date.
 #[derive(Debug, Clone)]
