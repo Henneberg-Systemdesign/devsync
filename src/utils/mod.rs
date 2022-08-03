@@ -78,17 +78,19 @@ pub fn save_dirs_and_files(
             Ok(e) => {
                 // first check if we should ignore this
                 if let Some(f) = filter {
-                    if !f
+                    if f
                         .iter()
                         .any(|p| e.path().as_path().to_str().unwrap().ends_with(p))
                     {
-                        let t = e.file_type().unwrap();
-                        if t.is_file() && e.file_name() != ARGS_FILE {
-                            files.push(e);
-                        } else if t.is_dir() && e.path() != p {
-                            dirs.push(e);
-                        }
+                        continue;
                     }
+                }
+
+                let t = e.file_type().unwrap();
+                if t.is_file() && e.file_name() != ARGS_FILE {
+                    files.push(e);
+                } else if t.is_dir() && e.path() != p {
+                    dirs.push(e);
                 }
             }
             Err(_) => continue,
