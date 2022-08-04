@@ -332,11 +332,11 @@ mod test {
         r
     }
 
-    fn init(archive: bool, delete: bool) -> (Arc<Config>, stats::Stats) {
+    fn init(a: bool, d: bool) -> (Arc<Config>, stats::Stats) {
         let cfg = Arc::new(Config {
             jobs: 1,
-            delete: delete,
-            archive: archive,
+            delete: d,
+            archive: a,
             owned: false,
             ignore: vec![],
         });
@@ -409,7 +409,7 @@ mod test {
             }
         }
         assert!(count == 4);
-        
+
         // cleanup
         let _ = fs::remove_dir_all(d.src_path);
         let _ = fs::remove_dir_all(d.target_path);
@@ -459,7 +459,7 @@ mod test {
             }
         }
         assert!(count == 6);
-        
+
         // cleanup
         let _ = fs::remove_dir_all(d.src_path);
         let _ = fs::remove_dir_all(d.target_path);
@@ -509,7 +509,7 @@ mod test {
             }
         }
         assert!(count == 6);
-        
+
         // cleanup
         let _ = fs::remove_dir_all(d.src_path);
         let _ = fs::remove_dir_all(d.target_path);
@@ -530,7 +530,7 @@ mod test {
         sample_dir(&tp);
 
         let mut d = Dir::new(0, cfg.clone(), stats.sender().clone())
-            .set_src_path(sp.clone())
+            .set_src_path(sp)
             .set_target_path(tp.clone());
 
         let _ = utils::save_dirs_and_files(
@@ -566,7 +566,7 @@ mod test {
             }
         }
         assert!(count == 5);
-        
+
         // cleanup
         let _ = fs::remove_dir_all(d.src_path);
         let _ = fs::remove_dir_all(d.target_path);
