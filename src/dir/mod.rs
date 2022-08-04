@@ -319,3 +319,256 @@ pub trait Flavour {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::path::{Path, PathBuf};
+
+    fn path() -> PathBuf {
+        let mut r = PathBuf::new();
+        r.push(env!("CARGO_MANIFEST_DIR"));
+        r.push("tests");
+        r
+    }
+
+    fn init(archive: bool, delete: bool) -> (Arc<Config>, stats::Stats) {
+        let cfg = Arc::new(Config {
+            jobs: 1,
+            delete: delete,
+            archive: archive,
+            owned: false,
+            ignore: vec![],
+        });
+
+        let stats = stats::Stats::default();
+
+        (cfg, stats)
+    }
+
+    fn sample_dir(p: &Path) {
+        utils::create_dir_save(p, true).expect("Failed to create path");
+        utils::create_dir_save(&p.join("dir_d"), false).expect("Failed to create path");
+        utils::create_dir_save(&p.join("dir_f"), false).expect("Failed to create path");
+        let _ = fs::File::create(p.join("file_a"));
+        let _ = fs::File::create(p.join("file_b"));
+        let _ = fs::File::create(p.join("file_c"));
+        let _ = fs::File::create(p.join("file_e"));
+        let _ = fs::File::create(p.join("dir_d").join("file_a"));
+        let _ = fs::File::create(p.join("dir_d").join("file_b"));
+    }
+
+    #[test]
+    fn test_new_set_and_ensure_target_path() {
+        let p = path();
+        let (cfg, stats) = init(false, false);
+
+        let d = Dir::new(0, cfg, stats.sender().clone())
+            .set_src_path(p.clone())
+            .set_target_path(p);
+        let _ = d.ensure_target_path();
+        assert!(d.target_path.exists());
+
+        // cleanup
+        let _ = fs::remove_dir_all(d.target_path);
+    }
+
+    #[test]
+    fn test_dup() {
+        let p = path();
+        let (cfg, stats) = init(false, false);
+
+        let sp = p.join("dup_1");
+        let tp = p.join("dup_2");
+
+        sample_dir(&sp);
+
+        let mut d = Dir::new(0, cfg.clone(), stats.sender().clone())
+            .set_src_path(sp)
+            .set_target_path(tp.clone());
+
+        let _ = utils::save_dirs_and_files(
+            d.src_path.as_path(),
+            &mut d.dirs,
+            &mut d.files,
+            None,
+            cfg.owned,
+        );
+
+        let _ = d.ensure_target_path();
+        let _ = d.dup();
+
+        let mut count = 0;
+        for f in fs::read_dir(tp).unwrap() {
+            let ff = f.unwrap();
+            let t = ff.file_type().unwrap();
+            count += 1;
+            match ff.file_name().into_string().unwrap().as_str() {
+                "file_a" | "file_b" | "file_c" | "file_e" => assert!(t.is_file()),
+                _ => unreachable!(),
+            }
+        }
+        assert!(count == 4);
+        
+        // cleanup
+        let _ = fs::remove_dir_all(d.src_path);
+        let _ = fs::remove_dir_all(d.target_path);
+    }
+
+    #[test]
+    fn test_merge() {
+        let p = path();
+        let (cfg, stats) = init(false, false);
+
+        let sp = p.join("merge_1");
+        let tp = p.join("merge_2");
+
+        sample_dir(&sp);
+        // ensure timestamps differs
+        std::thread::sleep(std::time::Duration::new(1, 0));
+        sample_dir(&tp);
+        let _ = fs::remove_file(tp.join("file_a"));
+
+        let mut d = Dir::new(0, cfg.clone(), stats.sender().clone())
+            .set_src_path(sp.clone())
+            .set_target_path(tp.clone());
+
+        let _ = utils::save_dirs_and_files(
+            d.src_path.as_path(),
+            &mut d.dirs,
+            &mut d.files,
+            None,
+            cfg.owned,
+        );
+
+        let _ = d.ensure_target_path();
+        let _ = d.merge();
+
+        let mut count = 0;
+        for f in fs::read_dir(&tp).unwrap() {
+            let ff = f.unwrap();
+            let t = ff.file_type().unwrap();
+            count += 1;
+            match ff.file_name().into_string().unwrap().as_str() {
+                "file_a" | "file_b" | "file_c" | "file_e" => {
+                    assert!(utils::diff(&tp, &sp, &ff));
+                    assert!(t.is_file());
+                }
+                "dir_d" | "dir_f" => assert!(t.is_dir()),
+                _ => unreachable!(),
+            }
+        }
+        assert!(count == 6);
+        
+        // cleanup
+        let _ = fs::remove_dir_all(d.src_path);
+        let _ = fs::remove_dir_all(d.target_path);
+    }
+
+    #[test]
+    fn test_merge_archive() {
+        let p = path();
+        let (cfg, stats) = init(true, false);
+
+        let sp = p.join("merge_archive_1");
+        let tp = p.join("merge_archive_2");
+
+        sample_dir(&sp);
+        // ensure timestamps differs
+        std::thread::sleep(std::time::Duration::new(1, 0));
+        sample_dir(&tp);
+        let _ = fs::remove_file(tp.join("file_a"));
+
+        let mut d = Dir::new(0, cfg.clone(), stats.sender().clone())
+            .set_src_path(sp.clone())
+            .set_target_path(tp.clone());
+
+        let _ = utils::save_dirs_and_files(
+            d.src_path.as_path(),
+            &mut d.dirs,
+            &mut d.files,
+            None,
+            cfg.owned,
+        );
+
+        let _ = d.ensure_target_path();
+        let _ = d.merge();
+
+        let mut count = 0;
+        for f in fs::read_dir(&tp).unwrap() {
+            let ff = f.unwrap();
+            let t = ff.file_type().unwrap();
+            count += 1;
+            match ff.file_name().into_string().unwrap().as_str() {
+                "file_a" | "file_b" | "file_c" | "file_e" => {
+                    assert!(!utils::diff(&tp, &sp, &ff));
+                    assert!(t.is_file());
+                }
+                "dir_d" | "dir_f" => assert!(t.is_dir()),
+                _ => unreachable!(),
+            }
+        }
+        assert!(count == 6);
+        
+        // cleanup
+        let _ = fs::remove_dir_all(d.src_path);
+        let _ = fs::remove_dir_all(d.target_path);
+    }
+
+    #[test]
+    fn test_merge_delete() {
+        let p = path();
+        let (cfg, stats) = init(false, true);
+
+        let sp = p.join("merge_delete_1");
+        let tp = p.join("merge_delete_2");
+
+        sample_dir(&sp);
+        let _ = fs::remove_file(sp.join("file_a"));
+        // ensure timestamps differs
+        std::thread::sleep(std::time::Duration::new(1, 0));
+        sample_dir(&tp);
+
+        let mut d = Dir::new(0, cfg.clone(), stats.sender().clone())
+            .set_src_path(sp.clone())
+            .set_target_path(tp.clone());
+
+        let _ = utils::save_dirs_and_files(
+            d.src_path.as_path(),
+            &mut d.dirs,
+            &mut d.files,
+            None,
+            cfg.owned,
+        );
+
+        let _ = utils::save_dirs_and_files(
+            d.target_path.as_path(),
+            &mut d.ex_dirs,
+            &mut d.ex_files,
+            None,
+            cfg.owned,
+        );
+        utils::filter_dir_entries(&d.dirs, &mut d.ex_dirs);
+        utils::filter_dir_entries(&d.files, &mut d.ex_files);
+
+        let _ = d.ensure_target_path();
+        let _ = d.merge();
+
+        let mut count = 0;
+        for f in fs::read_dir(&tp).unwrap() {
+            let ff = f.unwrap();
+            let t = ff.file_type().unwrap();
+            count += 1;
+            match ff.file_name().into_string().unwrap().as_str() {
+                "file_b" | "file_c" | "file_e" => assert!(t.is_file()),
+                "dir_d" | "dir_f" => assert!(t.is_dir()),
+                _ => unreachable!(),
+            }
+        }
+        assert!(count == 5);
+        
+        // cleanup
+        let _ = fs::remove_dir_all(d.src_path);
+        let _ = fs::remove_dir_all(d.target_path);
+    }
+}
