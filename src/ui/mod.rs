@@ -2,11 +2,12 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::cmp;
 use std::fs;
 use std::sync::Arc;
 
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
+    event::{read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -16,7 +17,7 @@ use tui::{
     layout::{Constraint, Corner, Direction, Layout},
     style::{Color, Modifier, Style},
     text::Span,
-    widgets::{Block, Borders, Gauge, List, ListItem},
+    widgets::{Block, Borders, Gauge, List, ListItem, ListState},
     Frame, Terminal,
 };
 
@@ -37,6 +38,8 @@ pub struct TermUi {
     runtime: vec::Vec<stats::Info>,
     /// If redraw shall be scheduled with [TermUi::render].
     redraw: bool,
+    /// Highlight item of runtime list.
+    runtime_state: ListState,
 }
 
 impl Drop for TermUi {
@@ -72,9 +75,10 @@ impl TermUi {
             jobs: vec![None; cfg.jobs as usize],
             runtime: vec![],
             redraw: false,
+            runtime_state: ListState::default(),
         };
         s.terminal
-            .draw(|f| Self::render(f, &s.jobs, &s.runtime, 0))?;
+            .draw(|f| Self::render(f, &s.jobs, &s.runtime, 0, &mut s.runtime_state))?;
         Ok(s)
     }
 
@@ -105,17 +109,64 @@ impl TermUi {
                 let p = (100 * self.stats.done + self.stats.error)
                     .checked_div(self.stats.todo)
                     .unwrap_or(0);
-                self.terminal
-                    .draw(|f| Self::render(f, &self.jobs, &self.runtime, p as u16))?;
+                self.terminal.draw(|f| {
+                    Self::render(
+                        f,
+                        &self.jobs,
+                        &self.runtime,
+                        p as u16,
+                        &mut self.runtime_state,
+                    )
+                })?;
             }
         }
         self.terminal
-            .draw(|f| Self::render(f, &self.jobs, &self.runtime, 100))?;
-        std::thread::sleep(std::time::Duration::new(1, 0));
+            .draw(|f| Self::render(f, &self.jobs, &self.runtime, 100, &mut self.runtime_state))?;
+
+        // quit on 'q' or 'Q'
+        loop {
+            if let Ok(Event::Key(e)) = read() {
+                let list = !self.runtime.is_empty();
+                match e.code {
+                    KeyCode::Up if list => match self.runtime_state.selected() {
+                        Some(i) => self.runtime_state.select(Some(i.saturating_sub(1))),
+                        None => self.runtime_state.select(Some(0)),
+                    },
+                    KeyCode::PageUp if list => match self.runtime_state.selected() {
+                        Some(i) => self.runtime_state.select(Some(i.saturating_sub(10))),
+                        None => self.runtime_state.select(Some(0)),
+                    },
+                    KeyCode::Down if list => match self.runtime_state.selected() {
+                        Some(i) => self
+                            .runtime_state
+                            .select(Some(cmp::min(i + 1, self.runtime.len() - 1))),
+                        None => self.runtime_state.select(Some(self.runtime.len() - 1)),
+                    },
+                    KeyCode::PageDown if list => match self.runtime_state.selected() {
+                        Some(i) => self
+                            .runtime_state
+                            .select(Some(cmp::min(i + 10, self.runtime.len() - 1))),
+                        None => self.runtime_state.select(Some(self.runtime.len() - 1)),
+                    },
+                    KeyCode::Char('q') | KeyCode::Char('Q') => break,
+                    _ => (),
+                }
+            }
+            self.terminal.draw(|f| {
+                Self::render(f, &self.jobs, &self.runtime, 100, &mut self.runtime_state)
+            })?;
+        }
+
         Ok(())
     }
 
-    fn render<B: Backend>(f: &mut Frame<B>, j: &[Option<stats::Info>], r: &[stats::Info], p: u16) {
+    fn render<B: Backend>(
+        f: &mut Frame<B>,
+        j: &[Option<stats::Info>],
+        r: &[stats::Info],
+        p: u16,
+        s: &mut ListState,
+    ) {
         let h = f.size().height;
         assert!(h > 2 * TermUi::PROGRESS_HEIGHT - TermUi::MIN_HEIGHT);
         let jobs_h = std::cmp::min(
@@ -187,10 +238,15 @@ impl TermUi {
             .collect();
         let runtime_list = List::new(runtime)
             .block(Block::default().borders(Borders::ALL).title(" Runtime "))
+            .highlight_style(
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            )
             .start_corner(Corner::TopLeft);
 
         f.render_widget(jobs_list, layout[0]);
-        f.render_widget(runtime_list, layout[1]);
+        f.render_stateful_widget(runtime_list, layout[1], s);
         f.render_widget(progress, layout[2]);
     }
 }
