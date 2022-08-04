@@ -34,6 +34,9 @@ runtime issues that happen along the way.
 It will remain active when the backup process has been completed and
 waits for a press on 'q' or 'Q' to terminate.
 
+Once the backup process is complete you can navigate through the
+runtime log with the up/down and page-up/page-down keys.
+
 ## Details
 Read the manpage for more information or look at the output of -h.
 
