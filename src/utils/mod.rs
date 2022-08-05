@@ -184,6 +184,12 @@ pub fn cp(s: &Path, t: &Path, f: &Path, archive: bool) -> Result<(), SyncError> 
     cp_r(s, t, p, archive)
 }
 
+/// Copy file with absolute path and create directory if needed.
+pub fn cp_d(s: &Path, t: &Path, f: &Path, archive: bool) -> Result<(), SyncError> {
+    let p = f.strip_prefix(s).unwrap();
+    cp_r_d(s, t, p, archive)
+}
+
 /// Check if a file has changed by comparing the last-modified timestamps.
 pub fn diff(s: &Path, t: &Path, f: &DirEntry) -> bool {
     let fp = f.path();
