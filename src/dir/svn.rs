@@ -2,15 +2,16 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use xml::EventReader;
+use crossbeam::thread;
 use xml::name::OwnedName;
 use xml::reader::XmlEvent;
-use log::{trace};
+use xml::EventReader;
 
 use super::utils::SyncError;
-use super::{Category, Dir, Flavour};
+use super::{utils, Category, Dir, Flavour};
 
 pub struct Svn {
     dir: Box<Option<Dir>>,
@@ -20,40 +21,120 @@ pub struct Svn {
     ignore_modified: bool,
 }
 
+enum Reason {
+    Modified,
+    Unversioned,
+}
+
+impl From<String> for Reason {
+    fn from(s: String) -> Self {
+        match s.as_str() {
+            "modified" => Reason::Modified,
+            "unversioned" => Reason::Unversioned,
+            _ => unreachable!(),
+        }
+    }
+}
+
 impl Svn {
-    fn dup_all(&self) -> Result<(), SyncError> {
-        trace!("Run svn command to get status");
-        let svn = Command::new("svn")
-            .arg("status")
-            .arg("--xml")
-            .stdout(Stdio::piped())
-            .spawn()?;
-
-        trace!("Parse XML output");
-        let mut reader = EventReader::new(svn.stdout.unwrap());
-        let t = std::thread::spawn(move || loop {
-            if let Ok(e) = reader.next() {
-                match e {
-                    XmlEvent::StartElement{name: OwnedName{local_name: n, ..}, ..} => trace!("Start element found: {}", n),
-                    XmlEvent::EndElement{name: OwnedName{local_name: n, ..}} => trace!("Start element found: {}", n),
-                    XmlEvent::EndDocument => break,
-                    _ => ()
-                }
-            }
-        });
-        trace!("XML parsing done");
-
-        let _ = t.join();
-
+    fn cp(s: &Path, t: &Path, f: &Path) -> Result<(), SyncError> {
+        utils::cp_d(s, t, f, false)?;
         Ok(())
+    }
+
+    fn dir_unchecked(&self) -> &Dir {
+        match self.dir.as_ref() {
+            Some(d) => d,
+            None => panic!("Flavours 'dir' entry is None"),
+        }
+    }
+
+    fn dup_all(&self) -> Result<(), SyncError> {
+        if let Some(d) = self.dir() {
+            utils::rm_dirs_and_files(d.target_path.as_path())?;
+
+            let svn = Command::new("svn")
+                .arg("status")
+                .arg("--xml")
+                .arg(self.dir_unchecked().src_path.as_path())
+                .stdout(Stdio::piped())
+                .spawn()?;
+
+            // our xml parser
+            let mut reader = EventReader::new(svn.stdout.unwrap());
+            // remember the file to handle, the file path as well as
+            // modified|unversioned
+            let mut file: (Option<PathBuf>, Option<Reason>) = (None, None);
+
+            // reader thread for svn command output
+            thread::scope(|scope| {
+                scope.spawn(|_| loop {
+                    if let Ok(e) = reader.next() {
+                        match e {
+                            XmlEvent::StartElement {
+                                name: OwnedName { local_name: n, .. },
+                                attributes: atts,
+                                ..
+                            } => match n.as_str() {
+                                "entry" => {
+                                    file.0 = atts.iter().find_map(|a| {
+                                        (a.name.local_name == "path")
+                                            .then_some(PathBuf::from(&a.value))
+                                    })
+                                }
+                                "wc-status" => {
+                                    file.1 = atts.iter().find_map(|a| {
+                                        (a.name.local_name == "item").then_some(a.value.clone().into())
+                                    })
+                                }
+                                _ => (),
+                            },
+                            XmlEvent::EndDocument => break,
+                            _ => (),
+                        }
+
+                        match &file {
+                            (Some(f), Some(Reason::Modified)) => {
+                                if !self.ignore_modified {
+                                    Self::cp(&d.src_path, &d.target_path, f);
+                                }
+                                file = (None, None);
+                            }
+                            (Some(f), Some(Reason::Unversioned)) => {
+                                if !self.ignore_unversioned {
+                                    Self::cp(&d.src_path, &d.target_path, f);
+                                }
+                                file = (None, None);
+                            }
+                            _ => (),
+                        }
+                    }
+                });
+            })
+            .unwrap();
+
+            Ok(())
+        } else {
+            Err(SyncError::Failed(
+                "Cannot synchronize without directory".to_string(),
+            ))
+        }
     }
 }
 
 impl Flavour for Svn {
     fn init_opts(opts: &mut getopts::Options) {
         opts.optflag("", "svn-ignore", "Ignore Svn repositories");
-        opts.optflag("", "svn-full", "Full backup (default is unversioned and modified)");
-        opts.optflag("", "svn-ignore-unversioned", "Don't backup unversioned files");
+        opts.optflag(
+            "",
+            "svn-full",
+            "Full backup (default is unversioned and modified)",
+        );
+        opts.optflag(
+            "",
+            "svn-ignore-unversioned",
+            "Don't backup unversioned files",
+        );
         opts.optflag("", "svn-ignore-modified", "Don't backup modified files");
     }
 
