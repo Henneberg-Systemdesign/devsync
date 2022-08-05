@@ -8,6 +8,15 @@ strip = 'symbols'
 [package]
 name = "devsync"
 version = "0.2.0"
+authors = "Jochen Henneberg [jh@henneberg-systemdesign.com]"
+description = "Backup tool for software developers"
+readme = "README.md"
+homepage = "https://github.com/Henneberg-Systemdesign/devsync"
+repository = "https://github.com/Henneberg-Systemdesign/devsync"
+license = "GPL-2.0-or-later"
+license-file = "LICENSE"
+keywords = ["backup", "developer"]
+categories = ["command-line-utilities"]
 edition = "2021"
 
 [dependencies]
