@@ -142,7 +142,7 @@ impl Git {
                     Delta::Modified if !self.ignore_unstaged => {
                         trace!("Backup unstaged {:?}", p);
                         if let Err(e) = utils::cp_r_d(&d.src_path, &tp_unstaged, p, true) {
-                            d.send_error(stats::Info {
+                            d.send_runtime(stats::Info {
                                 category: self.category(),
                                 name: String::from(self.name()),
                                 desc: format!(
@@ -163,7 +163,7 @@ impl Git {
                     Delta::Untracked if !self.ignore_untracked => {
                         trace!("Backup untracked {:?}", p);
                         if let Err(e) = utils::cp_r_d(&d.src_path, &tp_untracked, p, true) {
-                            d.send_error(stats::Info {
+                            d.send_runtime(stats::Info {
                                 category: self.category(),
                                 name: String::from(self.name()),
                                 desc: format!(
@@ -264,7 +264,7 @@ impl Git {
             utils::rm_dirs_and_files(d.target_path.as_path())?;
 
             if let Err(e) = self.dup_stashes() {
-                d.send_error(stats::Info {
+                d.send_runtime(stats::Info {
                     category: self.category(),
                     name: self.name().to_string(),
                     desc: format!("Failed to backup stashes because {}", e),
@@ -272,7 +272,7 @@ impl Git {
             }
 
             if let Err(e) = self.dup_status() {
-                d.send_error(stats::Info {
+                d.send_runtime(stats::Info {
                     category: self.category(),
                     name: self.name().to_string(),
                     desc: format!("Failed to backup status because {}", e),
@@ -280,7 +280,7 @@ impl Git {
             }
 
             if let Err(e) = self.dup_local() {
-                d.send_error(stats::Info {
+                d.send_runtime(stats::Info {
                     category: self.category(),
                     name: self.name().to_string(),
                     desc: format!("Failed to backup locals because {}", e),
