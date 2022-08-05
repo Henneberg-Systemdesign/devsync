@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crossbeam::channel::Sender;
-use log::trace;
+use log::{warn, trace};
 
 use super::utils::SyncError;
 use super::{stats, utils, Config};
@@ -124,7 +124,7 @@ impl Dir {
                 &f.path(),
                 self.config.archive,
             ) {
-                self.send_error(stats::Info {
+                self.send_runtime(stats::Info {
                     category: Category::Unknown,
                     name: String::new(),
                     desc: format!("Failed to duplicate file {:?} because {}", f, e),
@@ -141,7 +141,7 @@ impl Dir {
         // remove extraneous files
         for f in &self.ex_files {
             if let Err(e) = fs::remove_file(f.path().as_path()) {
-                self.send_error(stats::Info {
+                self.send_runtime(stats::Info {
                     category: Category::Unknown,
                     name: String::new(),
                     desc: format!("Failed to remove extraneous file {:?} because {}", f, e),
@@ -159,7 +159,7 @@ impl Dir {
                     &f.path(),
                     self.config.archive,
                 ) {
-                    self.send_error(stats::Info {
+                    self.send_runtime(stats::Info {
                         category: Category::Unknown,
                         name: String::new(),
                         desc: format!("Failed to merge file {:?} because {}", f, e),
@@ -172,7 +172,8 @@ impl Dir {
 
     /// Helper function to send [stats::Command::Runtime] messages to
     /// [stats::Stats].
-    pub fn send_error(&self, i: stats::Info) {
+    pub fn send_runtime(&self, i: stats::Info) {
+        warn!("{}", &i.desc);
         self.stats_chn
             .send(stats::Transport {
                 cmd: stats::Command::Runtime,
