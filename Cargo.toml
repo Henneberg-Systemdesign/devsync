@@ -7,7 +7,7 @@ strip = 'symbols'
 
 [package]
 name = "devsync"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Jochen Henneberg <jh@henneberg-systemdesign.com>"]
 description = "Backup tool for software developers - an object driven approach"
 readme = "README.md"
