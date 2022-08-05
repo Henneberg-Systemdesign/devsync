@@ -1,7 +1,7 @@
 # Maintainer: Jochen Henneberg <jh@henneberg-systemdesign.com>
 
 pkgname=devsync
-pkgver=0.1.0
+pkgver=0.2.0
 pkgrel=1
 pkgdesc="Backup tool for developers"
 arch=('i686' 'x86_64')
@@ -10,7 +10,7 @@ license=('GPL3')
 depends=('openssl')
 makedepends=('rust' 'gzip')
 source=("devsync-$pkgver.tar.gz::https://github.com/Henneberg-Systemdesign/devsync/archive/refs/tags/v${pkgver}.tar.gz")
-sha256sums=('932bba41bd79dca15435b9a7fea9725163fbbf6c86f86a6757d00fd0d2a08c4c')
+sha256sums=('f37a111ba71e1a85ca6b86552d30fca166b62645eda698c4677f9a1d5c855348')
 
 build() {
   cd "${srcdir}/devsync-${pkgver}"
