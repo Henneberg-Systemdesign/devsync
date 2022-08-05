@@ -8,7 +8,7 @@ strip = 'symbols'
 [package]
 name = "devsync"
 version = "0.2.0"
-authors = "Jochen Henneberg [jh@henneberg-systemdesign.com]"
+authors = ["Jochen Henneberg <jh@henneberg-systemdesign.com>"]
 description = "Backup tool for software developers"
 readme = "README.md"
 homepage = "https://github.com/Henneberg-Systemdesign/devsync"
