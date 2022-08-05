@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crossbeam::channel::Sender;
-use log::{warn, trace};
+use log::{trace, warn};
 
 use super::utils::SyncError;
 use super::{stats, utils, Config};
