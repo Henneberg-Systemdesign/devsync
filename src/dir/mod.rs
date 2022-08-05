@@ -474,11 +474,11 @@ mod test {
         let sp = p.join("merge_archive_1");
         let tp = p.join("merge_archive_2");
 
-        sample_dir(&sp);
-        // ensure timestamps differs
-        std::thread::sleep(std::time::Duration::new(1, 0));
         sample_dir(&tp);
         let _ = fs::remove_file(tp.join("file_a"));
+        // ensure timestamps differs
+        std::thread::sleep(std::time::Duration::new(1, 0));
+        sample_dir(&sp);
 
         let mut d = Dir::new(0, cfg.clone(), stats.sender().clone())
             .set_src_path(sp.clone())
