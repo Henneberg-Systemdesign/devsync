@@ -9,7 +9,7 @@ use git2::build::{CloneLocal, RepoBuilder};
 use git2::{
     Branch, BranchType, Delta, Email, EmailCreateOptions, ObjectType, Repository, Signature,
 };
-use log::{error, trace};
+use log::trace;
 
 use super::utils::SyncError;
 use super::{stats, utils, Category, Dir, Flavour};
@@ -142,11 +142,20 @@ impl Git {
                     Delta::Modified if !self.ignore_unstaged => {
                         trace!("Backup unstaged {:?}", p);
                         if let Err(e) = utils::cp_r_d(&d.src_path, &tp_unstaged, p, true) {
-                            error!("Failed to backup unstaged file {:?} because {}", p, e);
-                            r = Err(SyncError::Failed(format!(
-                                "Failed to backup file(s) from {:?}",
-                                d.src_path
-                            )));
+                            d.send_runtime(stats::Info {
+                                category: self.category(),
+                                name: String::from(self.name()),
+                                desc: format!(
+                                    "Failed to backup unstaged file {:?} because {}",
+                                    p, e
+                                ),
+                            });
+                            if r.is_ok() {
+                                r = Err(SyncError::Failed(format!(
+                                    "Failed to backup file(s) from {:?}",
+                                    d.src_path
+                                )))
+                            }
                         } else {
                             empty.1 = false;
                         }
@@ -154,11 +163,20 @@ impl Git {
                     Delta::Untracked if !self.ignore_untracked => {
                         trace!("Backup untracked {:?}", p);
                         if let Err(e) = utils::cp_r_d(&d.src_path, &tp_untracked, p, true) {
-                            error!("Failed to backup untracked file {:?} because {}", p, e);
-                            r = Err(SyncError::Failed(format!(
-                                "Failed to backup file(s) from {:?}",
-                                d.src_path
-                            )));
+                            d.send_runtime(stats::Info {
+                                category: self.category(),
+                                name: String::from(self.name()),
+                                desc: format!(
+                                    "Failed to backup untracked file {:?} because {}",
+                                    p, e
+                                ),
+                            });
+                            if r.is_ok() {
+                                r = Err(SyncError::Failed(format!(
+                                    "Failed to backup file(s) from {:?}",
+                                    d.src_path
+                                )))
+                            }
                         } else {
                             empty.0 = false;
                         }
@@ -246,7 +264,7 @@ impl Git {
             utils::rm_dirs_and_files(d.target_path.as_path())?;
 
             if let Err(e) = self.dup_stashes() {
-                d.send_error(stats::Info {
+                d.send_runtime(stats::Info {
                     category: self.category(),
                     name: self.name().to_string(),
                     desc: format!("Failed to backup stashes because {}", e),
@@ -254,7 +272,7 @@ impl Git {
             }
 
             if let Err(e) = self.dup_status() {
-                d.send_error(stats::Info {
+                d.send_runtime(stats::Info {
                     category: self.category(),
                     name: self.name().to_string(),
                     desc: format!("Failed to backup status because {}", e),
@@ -262,7 +280,7 @@ impl Git {
             }
 
             if let Err(e) = self.dup_local() {
-                d.send_error(stats::Info {
+                d.send_runtime(stats::Info {
                     category: self.category(),
                     name: self.name().to_string(),
                     desc: format!("Failed to backup locals because {}", e),

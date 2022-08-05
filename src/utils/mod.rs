@@ -193,7 +193,7 @@ pub fn diff(s: &Path, t: &Path, f: &DirEntry) -> bool {
     trace!("Check diff of {:?} vs {:?}", s, t);
     match fs::metadata(t) {
         Ok(m) => {
-            m.modified().unwrap() != f.metadata().unwrap().modified().unwrap()
+            m.modified().unwrap() < f.metadata().unwrap().modified().unwrap()
                 || m.permissions() != f.metadata().unwrap().permissions()
         }
         Err(_) => true,
