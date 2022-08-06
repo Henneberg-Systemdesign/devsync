@@ -467,8 +467,8 @@ mod test {
         sample_dir(&p.join("cp_2"));
 
         let _ = cp(
-            &p.join("cp_1").join("file_a"),
-            &p.join("cp_2").join("file_a"),
+            &p.join("cp_1"),
+            &p.join("cp_2"),
             &p.join("cp_1").join("file_a"),
             false,
         );
@@ -477,5 +477,23 @@ mod test {
         // cleanup
         let _ = fs::remove_dir_all(p.join("cp_1"));
         let _ = fs::remove_dir_all(p.join("cp_2"));
+    }
+
+    #[test]
+    fn test_cp_d() {
+        let p = path();
+        sample_dir(&p.join("cp_d_1"));
+
+        let _ = cp_d(
+            &p.join("cp_d_1"),
+            &p.join("cp_d_2"),
+            &p.join("cp_d_1").join("file_a"),
+            false,
+        );
+        assert!(p.join("cp_d_2").join("file_a").exists());
+
+        // cleanup
+        let _ = fs::remove_dir_all(p.join("cp_d_1"));
+        let _ = fs::remove_dir_all(p.join("cp_d_2"));
     }
 }
