@@ -6,12 +6,13 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use crossbeam::thread;
+use log::trace;
 use xml::name::OwnedName;
 use xml::reader::XmlEvent;
 use xml::EventReader;
 
 use super::utils::SyncError;
-use super::{utils, Category, Dir, Flavour};
+use super::{stats, utils, Category, Dir, Flavour};
 
 pub struct Svn {
     dir: Box<Option<Dir>>,
@@ -22,16 +23,18 @@ pub struct Svn {
 }
 
 enum Reason {
+    None,
     Modified,
     Unversioned,
 }
 
 impl From<String> for Reason {
     fn from(s: String) -> Self {
+        trace!("Map string {} to reason", s);
         match s.as_str() {
             "modified" => Reason::Modified,
             "unversioned" => Reason::Unversioned,
-            _ => unreachable!(),
+            _ => Reason::None,
         }
     }
 }
@@ -84,7 +87,13 @@ impl Svn {
                                 }
                                 "wc-status" => {
                                     file.1 = atts.iter().find_map(|a| {
-                                        (a.name.local_name == "item").then_some(a.value.clone().into())
+                                        trace!(
+                                            "Handle wc-status {} {}",
+                                            &a.name.local_name,
+                                            &a.value
+                                        );
+                                        (a.name.local_name == "item")
+                                            .then_some(a.value.clone().into())
                                     })
                                 }
                                 _ => (),
@@ -95,18 +104,41 @@ impl Svn {
 
                         match &file {
                             (Some(f), Some(Reason::Modified)) => {
-                                if !self.ignore_modified {
-                                    Self::cp(&d.src_path, &d.target_path, f);
+                                if !self.ignore_modified && Path::new(f).is_file() {
+                                    if let Err(e) =
+                                        Self::cp(&d.src_path, &d.target_path.join("modified"), f)
+                                    {
+                                        d.send_runtime(stats::Info {
+                                            category: self.category(),
+                                            name: String::from(self.name()),
+                                            desc: format!(
+                                                "Failed to backup modified file {:?} because {}",
+                                                f, e
+                                            ),
+                                        });
+                                    }
                                 }
                                 file = (None, None);
                             }
                             (Some(f), Some(Reason::Unversioned)) => {
                                 if !self.ignore_unversioned {
-                                    Self::cp(&d.src_path, &d.target_path, f);
+                                    if let Err(e) =
+                                        Self::cp(&d.src_path, &d.target_path.join("unversioned"), f)
+                                    {
+                                        d.send_runtime(stats::Info {
+                                            category: self.category(),
+                                            name: String::from(self.name()),
+                                            desc: format!(
+                                                "Failed to backup unversioned file {:?} because {}",
+                                                f, e
+                                            ),
+                                        });
+                                    }
                                 }
                                 file = (None, None);
                             }
-                            _ => (),
+                            (_, Some(Reason::None)) => file = (None, None),
+                             _ => (),
                         }
                     }
                 });
