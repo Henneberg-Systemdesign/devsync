@@ -92,6 +92,7 @@ impl Svn {
                 .arg("--xml")
                 .arg(&p)
                 .stdout(Stdio::piped())
+                .stderr(Stdio::null())
                 .spawn()?;
 
             // our xml parser
@@ -149,6 +150,7 @@ impl Svn {
                 .arg("--xml")
                 .arg(d.src_path.as_path())
                 .stdout(Stdio::piped())
+                .stderr(Stdio::null())
                 .spawn()?
         };
 
