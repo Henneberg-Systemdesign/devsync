@@ -107,7 +107,7 @@ impl Dir {
         if !self.target_path.exists() {
             trace!("Create directory {:?}", self.target_path);
             m = SyncMethod::Duplicate;
-            fs::create_dir(&self.target_path)?
+            fs::create_dir_all(&self.target_path)?
         }
 
         Ok(m)
