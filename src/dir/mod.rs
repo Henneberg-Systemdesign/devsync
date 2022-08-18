@@ -288,7 +288,7 @@ pub trait Flavour {
 
     /// Prepare for backup. Default implementations simply creates the
     /// target directory.
-    fn prepare(&self) -> Result<SyncMethod, SyncError> {
+    fn prepare(&mut self) -> Result<SyncMethod, SyncError> {
         if let Some(d) = self.dir() {
             d.ensure_target_path()
         } else {
