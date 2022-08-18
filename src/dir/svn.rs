@@ -162,66 +162,59 @@ impl Svn {
 
         // reader thread for svn command output
         thread::scope(|scope| {
-            scope.spawn(|_| {
-                //let mut unversioned_dirs = vec![];
-                loop {
-                    if let Ok(e) = reader.next() {
-                        match e {
-                            XmlEvent::StartElement {
-                                name: OwnedName { local_name: n, .. },
-                                attributes: atts,
-                                ..
-                            } => match n.as_str() {
-                                "entry" => {
-                                    file.0 = atts.iter().find_map(|a| {
-                                        (a.name.local_name == "path")
-                                            .then_some(PathBuf::from(&a.value))
-                                    })
-                                }
-                                "wc-status" => {
-                                    file.1 = atts.iter().find_map(|a| {
-                                        (a.name.local_name == "item")
-                                            .then_some(a.value.clone().into())
-                                    })
-                                }
-                                _ => (),
-                            },
-                            XmlEvent::EndDocument => break,
+            scope.spawn(|_| loop {
+                if let Ok(e) = reader.next() {
+                    match e {
+                        XmlEvent::StartElement {
+                            name: OwnedName { local_name: n, .. },
+                            attributes: atts,
+                            ..
+                        } => match n.as_str() {
+                            "entry" => {
+                                file.0 = atts.iter().find_map(|a| {
+                                    (a.name.local_name == "path").then_some(PathBuf::from(&a.value))
+                                })
+                            }
+                            "wc-status" => {
+                                file.1 = atts.iter().find_map(|a| {
+                                    (a.name.local_name == "item").then_some(a.value.clone().into())
+                                })
+                            }
                             _ => (),
-                        }
+                        },
+                        XmlEvent::EndDocument => break,
+                        _ => (),
+                    }
 
-                        match &file {
-                            (Some(f), Some(Reason::Modified)) => {
-                                if !self.ignore_modified && Path::new(f).is_file() {
-                                    self.modified.push(f.clone());
-                                }
-                                file = (None, None);
+                    match &file {
+                        (Some(f), Some(Reason::Modified)) => {
+                            if !self.ignore_modified && Path::new(f).is_file() {
+                                self.modified.push(f.clone());
                             }
-                            (Some(f), Some(Reason::Unversioned)) => {
-                                if !self.ignore_unversioned {
-                                    let p = Path::new(f);
-                                    if p.is_dir() {
-                                        for e in
-                                            fs::read_dir(p.parent().unwrap()).unwrap().flatten()
-                                        {
-                                            if e.path().as_path() != p {
-                                                continue;
-                                            }
-                                            if !e.file_type().unwrap().is_dir() {
-                                                continue;
-                                            }
-                                            let dirs = &mut self.dir_unchecked_mut().dirs;
-                                            dirs.push(e);
-                                        }
-                                    } else {
-                                        self.unversioned.push(f.clone());
-                                    }
-                                }
-                                file = (None, None);
-                            }
-                            (_, Some(Reason::None)) => file = (None, None),
-                            _ => (),
+                            file = (None, None);
                         }
+                        (Some(f), Some(Reason::Unversioned)) => {
+                            if !self.ignore_unversioned {
+                                let p = Path::new(f);
+                                if p.is_dir() {
+                                    for e in fs::read_dir(p.parent().unwrap()).unwrap().flatten() {
+                                        if e.path().as_path() != p {
+                                            continue;
+                                        }
+                                        if !e.file_type().unwrap().is_dir() {
+                                            continue;
+                                        }
+                                        let dirs = &mut self.dir_unchecked_mut().dirs;
+                                        dirs.push(e);
+                                    }
+                                } else {
+                                    self.unversioned.push(f.clone());
+                                }
+                            }
+                            file = (None, None);
+                        }
+                        (_, Some(Reason::None)) => file = (None, None),
+                        _ => (),
                     }
                 }
             });
