@@ -161,6 +161,16 @@ scanned for other categories.
 **\-\-svn-ignore**
 :   Ignore SVN directories.
 
+**\-\-svn-full**
+:   Do a full sync - treat repository like a plain directory and
+    rescan subdirectories e. g. for build directories.
+
+**\-\-svn-ignore-unversioned**
+:   Do not backup unversioned files.
+
+**\-\-svn-ignore-modified**
+:   Do not backup modified files.
+
 ## Git
 
 Git repositories are identified by the directory '.git'. By default a
@@ -208,7 +218,10 @@ using RUST_LOG environment variable.
 # REPORTING BUGS
 
 Bugs can be reported on
-<https://github.com/Henneberg-Systemdesign/devsync>, License GPLv3+:
+<https://github.com/Henneberg-Systemdesign/devsync>
+
+# LICENSE
+
 GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
 
 # COPYRIGHT

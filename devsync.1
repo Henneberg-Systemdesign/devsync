@@ -165,6 +165,18 @@ scanned for other categories.
 .TP
 \f[B]--svn-ignore\f[R]
 Ignore SVN directories.
+.TP
+\f[B]--svn-full\f[R]
+Do a full sync - treat repository like a plain directory and rescan
+subdirectories e.
+g.
+for build directories.
+.TP
+\f[B]--svn-ignore-unversioned\f[R]
+Do not backup unversioned files.
+.TP
+\f[B]--svn-ignore-modified\f[R]
+Do not backup modified files.
 .SS Git
 .PP
 Git repositories are identified by the directory `.git'.
@@ -217,8 +229,10 @@ using RUST_LOG environment variable.
 .SH REPORTING BUGS
 .PP
 Bugs can be reported on
-<https://github.com/Henneberg-Systemdesign/devsync>, License GPLv3+: GNU
-GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
+<https://github.com/Henneberg-Systemdesign/devsync>
+.SH LICENSE
+.PP
+GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
 .SH COPYRIGHT
 .PP
 Copyright \[co] 2022 Jochen Henneberg.
