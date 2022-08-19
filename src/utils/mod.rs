@@ -184,6 +184,12 @@ pub fn cp(s: &Path, t: &Path, f: &Path, archive: bool) -> Result<(), SyncError> 
     cp_r(s, t, p, archive)
 }
 
+/// Copy file with absolute path and create directory if needed.
+pub fn cp_d(s: &Path, t: &Path, f: &Path, archive: bool) -> Result<(), SyncError> {
+    let p = f.strip_prefix(s).unwrap();
+    cp_r_d(s, t, p, archive)
+}
+
 /// Check if a file has changed by comparing the last-modified timestamps.
 pub fn diff(s: &Path, t: &Path, f: &DirEntry) -> bool {
     let fp = f.path();
@@ -461,8 +467,8 @@ mod test {
         sample_dir(&p.join("cp_2"));
 
         let _ = cp(
-            &p.join("cp_1").join("file_a"),
-            &p.join("cp_2").join("file_a"),
+            &p.join("cp_1"),
+            &p.join("cp_2"),
             &p.join("cp_1").join("file_a"),
             false,
         );
@@ -471,5 +477,23 @@ mod test {
         // cleanup
         let _ = fs::remove_dir_all(p.join("cp_1"));
         let _ = fs::remove_dir_all(p.join("cp_2"));
+    }
+
+    #[test]
+    fn test_cp_d() {
+        let p = path();
+        sample_dir(&p.join("cp_d_1"));
+
+        let _ = cp_d(
+            &p.join("cp_d_1"),
+            &p.join("cp_d_2"),
+            &p.join("cp_d_1").join("file_a"),
+            false,
+        );
+        assert!(p.join("cp_d_2").join("file_a").exists());
+
+        // cleanup
+        let _ = fs::remove_dir_all(p.join("cp_d_1"));
+        let _ = fs::remove_dir_all(p.join("cp_d_2"));
     }
 }

@@ -107,7 +107,7 @@ impl Dir {
         if !self.target_path.exists() {
             trace!("Create directory {:?}", self.target_path);
             m = SyncMethod::Duplicate;
-            fs::create_dir(&self.target_path)?
+            fs::create_dir_all(&self.target_path)?
         }
 
         Ok(m)
@@ -288,7 +288,7 @@ pub trait Flavour {
 
     /// Prepare for backup. Default implementations simply creates the
     /// target directory.
-    fn prepare(&self) -> Result<SyncMethod, SyncError> {
+    fn prepare(&mut self) -> Result<SyncMethod, SyncError> {
         if let Some(d) = self.dir() {
             d.ensure_target_path()
         } else {

@@ -179,11 +179,10 @@ impl Scan {
             .expect("Failed to send log");
     }
 
-    fn process_flavour(&self, flav: Box<dyn dir::Flavour>, job: u8) -> Result<(), SyncError> {
-        let p = flav.dir().as_ref().unwrap().src_path.as_path();
-
+    fn process_flavour(&self, mut flav: Box<dyn dir::Flavour>, job: u8) -> Result<(), SyncError> {
         match flav.prepare() {
             Ok(m) => {
+                let p = flav.dir().as_ref().unwrap().src_path.as_path();
                 // now tell the thread pool about new work
                 if flav.recurse() {
                     let d = &mut flav.dir().as_ref().unwrap();
@@ -192,10 +191,7 @@ impl Scan {
                         fs::remove_dir_all(e.path().as_path())?;
                     }
                     // send all directory entries to thread pool
-                    let stay = match flav.stay() {
-                        true => Some(flav.name().to_string()),
-                        false => None,
-                    };
+                    let stay = flav.stay().then_some(flav.name().to_string());
                     for p in &d.dirs {
                         self.todo_one();
                         self.scan_chn.0.send((p.path(), stay.clone())).unwrap();
@@ -220,6 +216,7 @@ impl Scan {
                 }
             }
             Err(_) => {
+                let p = flav.dir().as_ref().unwrap().src_path.as_path();
                 error!("Failed to prepare synchronization for {:?}", p);
             }
         }
