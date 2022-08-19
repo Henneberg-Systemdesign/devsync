@@ -96,7 +96,11 @@ impl Scan {
             .iter()
             .find_map(|f| {
                 if f_name.is_some() {
-                    Some(f.build())
+                    if f_name.as_ref().unwrap() == f.name() {
+                        Some(f.build())
+                    } else {
+                        None
+                    }
                 } else if let Some(flav) = f.probe(&d) {
                     Some(flav)
                 } else {
