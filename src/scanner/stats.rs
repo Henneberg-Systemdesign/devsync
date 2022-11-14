@@ -10,7 +10,7 @@ use log::trace;
 use super::dir;
 
 /// Command type of channel transport.
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Command {
     /// Modify [Stats::todo] counter.
     Todo,

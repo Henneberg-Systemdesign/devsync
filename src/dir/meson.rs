@@ -64,7 +64,7 @@ impl Flavour for Meson {
     }
 
     fn dir(&self) -> &Option<Dir> {
-        &*self.dir
+        &self.dir
     }
 
     fn category(&self) -> Category {

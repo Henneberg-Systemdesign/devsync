@@ -44,7 +44,7 @@ impl Flavour for Cargo {
     }
 
     fn dir(&self) -> &Option<Dir> {
-        &*self.dir
+        &self.dir
     }
 
     fn category(&self) -> Category {

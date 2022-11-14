@@ -337,7 +337,7 @@ impl Flavour for Svn {
     }
 
     fn dir(&self) -> &Option<Dir> {
-        &*self.dir
+        &self.dir
     }
 
     fn name(&self) -> &'static str {

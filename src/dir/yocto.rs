@@ -88,7 +88,7 @@ impl Flavour for Yocto {
     }
 
     fn dir(&self) -> &Option<Dir> {
-        &*self.dir
+        &self.dir
     }
 
     fn category(&self) -> Category {

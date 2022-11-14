@@ -344,7 +344,7 @@ impl Flavour for Git {
     }
 
     fn dir(&self) -> &Option<Dir> {
-        &*self.dir
+        &self.dir
     }
 
     fn name(&self) -> &'static str {

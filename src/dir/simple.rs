@@ -38,6 +38,6 @@ impl Flavour for Simple {
     }
 
     fn dir(&self) -> &Option<Dir> {
-        &*self.dir
+        &self.dir
     }
 }

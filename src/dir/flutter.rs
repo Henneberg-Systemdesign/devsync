@@ -48,7 +48,7 @@ impl Flavour for Flutter {
     }
 
     fn dir(&self) -> &Option<Dir> {
-        &*self.dir
+        &self.dir
     }
 
     fn category(&self) -> Category {
