@@ -173,7 +173,7 @@ pub fn cp_r(s: &Path, t: &Path, f: &Path, archive: bool) -> Result<(), SyncError
 /// Copy file with relative path and create directory if needed.
 pub fn cp_r_d(s: &Path, t: &Path, f: &Path, archive: bool) -> Result<(), SyncError> {
     if let Some(p) = f.parent() {
-        fs::create_dir_all(&t.join(p))?;
+        fs::create_dir_all(t.join(p))?;
     }
     cp_r(s, t, f, archive)
 }

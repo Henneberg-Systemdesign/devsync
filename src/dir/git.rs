@@ -45,7 +45,7 @@ impl Git {
         if p.exists() {
             fs::remove_dir_all(p)?;
         }
-        fs::File::create(&d.target_path.as_path().join(&format!("{}.{}", n, s)))?;
+        fs::File::create(d.target_path.as_path().join(format!("{}.{}", n, s)))?;
         Ok(())
     }
 

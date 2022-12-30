@@ -186,7 +186,7 @@ fn main() {
 
     let mut stats = stats::Stats::default();
     let scanner = Scanner::new(&args, &src, &target, &stats, cfg.clone());
-    let mut log_file = fs::File::create(&target.join(LOG_FILE)).expect("Cannot create log file");
+    let mut log_file = fs::File::create(target.join(LOG_FILE)).expect("Cannot create log file");
 
     let stats_th = if args.opt_present("u") {
         let mut ui = ui::TermUi::new(stats, cfg).unwrap();
