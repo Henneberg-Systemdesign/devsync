@@ -35,14 +35,15 @@ impl Flavour for Meson {
 
     /// Look for directories 'meson-info', 'meson-logs' and
     /// 'meson-private' to identify Meson build directory.
-    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour>> {
+    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour + Send + Sync>> {
         let mut m = RequiredFiles::NONE;
         for d in &d.files {
-            if d.file_name() == "meson-info" {
+            let f = d.file_name().unwrap();
+            if f == "meson-info" {
                 m |= RequiredFiles::INFO;
-            } else if d.file_name() == "meson-logs" {
+            } else if f == "meson-logs" {
                 m |= RequiredFiles::LOGS;
-            } else if d.file_name() == "meson-private" {
+            } else if f == "meson-private" {
                 m |= RequiredFiles::PRIV;
             }
             if m == RequiredFiles::ALL {
@@ -52,7 +53,7 @@ impl Flavour for Meson {
         None
     }
 
-    fn build(&self) -> Box<dyn Flavour> {
+    fn build(&self) -> Box<dyn Flavour + Send + Sync> {
         Box::new(Meson {
             dir: Box::new(None),
             ignore: self.ignore,
@@ -65,6 +66,10 @@ impl Flavour for Meson {
 
     fn dir(&self) -> &Option<Dir> {
         &self.dir
+    }
+
+    fn dir_mut(&mut self) -> &mut Option<Dir> {
+        &mut self.dir
     }
 
     fn category(&self) -> Category {

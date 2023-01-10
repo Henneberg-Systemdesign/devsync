@@ -318,16 +318,16 @@ impl Flavour for Git {
     }
 
     /// Probe for '.git' file to identify Git repository.
-    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour>> {
+    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour + Send + Sync>> {
         for d in &d.dirs {
-            if d.file_name() == ".git" {
+            if d.file_name().unwrap() == ".git" {
                 return Some(self.build());
             }
         }
         None
     }
 
-    fn build(&self) -> Box<dyn Flavour> {
+    fn build(&self) -> Box<dyn Flavour + Send + Sync> {
         Box::new(Git {
             dir: Box::new(None),
             ignore: self.ignore,
@@ -345,6 +345,10 @@ impl Flavour for Git {
 
     fn dir(&self) -> &Option<Dir> {
         &self.dir
+    }
+
+    fn dir_mut(&mut self) -> &mut Option<Dir> {
+        &mut self.dir
     }
 
     fn name(&self) -> &'static str {

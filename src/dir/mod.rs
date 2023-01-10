@@ -6,7 +6,6 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::Debug;
 use std::fs;
-use std::fs::DirEntry;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -52,15 +51,17 @@ pub struct Dir {
     /// Target path to be synced to.
     pub target_path: PathBuf,
     /// Sub-directories inside this directory.
-    pub dirs: Vec<DirEntry>,
+    pub dirs: Vec<PathBuf>,
     /// Files inside this directory.
-    pub files: Vec<DirEntry>,
+    pub files: Vec<PathBuf>,
     /// Extraneous directories.
-    pub ex_dirs: Vec<DirEntry>,
+    pub ex_dirs: Vec<PathBuf>,
     /// Extraneous files.
-    pub ex_files: Vec<DirEntry>,
+    pub ex_files: Vec<PathBuf>,
     /// The job id this directory is processed in.
     pub job: u8,
+    /// Synchronization method.
+    pub method: SyncMethod,
     /// The global configuration [super::Config].
     pub config: Arc<Config>,
     /// Sender channel for [stats::Stats]
@@ -78,6 +79,7 @@ impl Dir {
             ex_dirs: Vec::new(),
             ex_files: Vec::new(),
             job: j,
+            method: SyncMethod::Merge,
             config: cfg,
             stats_chn: chn,
         }
@@ -95,10 +97,9 @@ impl Dir {
         self
     }
 
-    /// Helper function for [Flavour::prepare] default implementation.
-    pub fn ensure_target_path(&self) -> Result<SyncMethod, SyncError> {
-        let mut m = SyncMethod::Merge;
-
+    /// Helper function for [Flavour::prepare] default
+    /// implementation.
+    pub fn ensure_target_path(&mut self) -> Result<(), SyncError> {
         if self.target_path.is_file() {
             trace!("Replace file {:?} with directory", self.target_path);
             fs::remove_file(&self.target_path)?
@@ -106,11 +107,11 @@ impl Dir {
 
         if !self.target_path.exists() {
             trace!("Create directory {:?}", self.target_path);
-            m = SyncMethod::Duplicate;
+            self.method = SyncMethod::Duplicate;
             fs::create_dir_all(&self.target_path)?
         }
 
-        Ok(m)
+        Ok(())
     }
 
     /// Helper function for [Flavour::dup] default
@@ -118,12 +119,7 @@ impl Dir {
     /// the default.
     pub fn dup(&self) -> Result<(), SyncError> {
         for f in &self.files {
-            if let Err(e) = utils::cp(
-                &self.src_path,
-                &self.target_path,
-                &f.path(),
-                self.config.archive,
-            ) {
+            if let Err(e) = utils::cp(&self.src_path, &self.target_path, f, self.config.archive) {
                 self.send_runtime(stats::Info {
                     category: Category::Unknown,
                     name: String::new(),
@@ -140,7 +136,7 @@ impl Dir {
     pub fn merge(&self) -> Result<(), SyncError> {
         // remove extraneous files
         for f in &self.ex_files {
-            if let Err(e) = fs::remove_file(f.path().as_path()) {
+            if let Err(e) = fs::remove_file(f) {
                 self.send_runtime(stats::Info {
                     category: Category::Unknown,
                     name: String::new(),
@@ -153,12 +149,8 @@ impl Dir {
         for f in &self.files {
             if utils::diff(&self.src_path, &self.target_path, f) {
                 trace!("File {:?} has changed", &f);
-                if let Err(e) = utils::cp(
-                    &self.src_path,
-                    &self.target_path,
-                    &f.path(),
-                    self.config.archive,
-                ) {
+                if let Err(e) = utils::cp(&self.src_path, &self.target_path, f, self.config.archive)
+                {
                     self.send_runtime(stats::Info {
                         category: Category::Unknown,
                         name: String::new(),
@@ -228,7 +220,7 @@ impl PartialOrd for Category {
 }
 
 /// Method that shall be used for directory synchronization.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum SyncMethod {
     /// Merge changed data into exisiting backup.
     Merge,
@@ -248,10 +240,10 @@ pub trait Flavour {
         Self: Sized;
 
     /// Probe if flavour matches given directory.
-    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour>>;
+    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour + Send + Sync>>;
 
     /// Build flavour.
-    fn build(&self) -> Box<dyn Flavour>;
+    fn build(&self) -> Box<dyn Flavour + Send + Sync>;
 
     /// Set [Dir] on flavour.
     fn set_dir(&mut self, d: Dir);
@@ -260,6 +252,9 @@ pub trait Flavour {
     fn dir(&self) -> &Option<Dir> {
         &None
     }
+
+    /// Get [Dir] from flavour.
+    fn dir_mut(&mut self) -> &mut Option<Dir>;
 
     /// Get flavour name.
     fn name(&self) -> &'static str {
@@ -286,10 +281,15 @@ pub trait Flavour {
         false
     }
 
-    /// Prepare for backup. Default implementations simply creates the
-    /// target directory.
-    fn prepare(&mut self) -> Result<SyncMethod, SyncError> {
-        if let Some(d) = self.dir() {
+    /// Get synchronization metod.
+    fn method(&self) -> SyncMethod {
+        self.dir().as_ref().unwrap().method
+    }
+
+    /// Prepare for backup and set the method. Default implementations
+    /// simply creates the target directory.
+    fn prepare(&mut self) -> Result<(), SyncError> {
+        if let Some(d) = self.dir_mut() {
             d.ensure_target_path()
         } else {
             Err(SyncError::Failed(
@@ -318,6 +318,18 @@ pub trait Flavour {
                 "Cannot synchronize without directory".to_string(),
             ))
         }
+    }
+}
+
+impl fmt::Debug for dyn Flavour + Send + Sync {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let p = format!("{:?}", self.dir().as_ref().unwrap().src_path);
+        f.pad(&format!(
+            "name {}, category {} at {}",
+            self.name(),
+            self.category(),
+            p
+        ))
     }
 }
 
@@ -364,7 +376,7 @@ mod test {
         let p = path();
         let (cfg, stats) = init(false, false);
 
-        let d = Dir::new(0, cfg, stats.sender().clone())
+        let mut d = Dir::new(0, cfg, stats.sender().clone())
             .set_src_path(p.clone())
             .set_target_path(p);
         let _ = d.ensure_target_path();
@@ -400,11 +412,10 @@ mod test {
         let _ = d.dup();
 
         let mut count = 0;
-        for f in fs::read_dir(tp).unwrap() {
-            let ff = f.unwrap();
-            let t = ff.file_type().unwrap();
+        for f in fs::read_dir(tp).unwrap().flatten() {
+            let t = f.file_type().unwrap();
             count += 1;
-            match ff.file_name().into_string().unwrap().as_str() {
+            match f.file_name().to_str().unwrap() {
                 "file_a" | "file_b" | "file_c" | "file_e" => assert!(t.is_file()),
                 _ => unreachable!(),
             }
@@ -446,11 +457,11 @@ mod test {
         let _ = d.merge();
 
         let mut count = 0;
-        for f in fs::read_dir(&tp).unwrap() {
-            let ff = f.unwrap();
-            let t = ff.file_type().unwrap();
+        for f in fs::read_dir(&tp).unwrap().flatten() {
+            let t = f.file_type().unwrap();
+            let ff = f.path();
             count += 1;
-            match ff.file_name().into_string().unwrap().as_str() {
+            match ff.file_name().unwrap().to_str().unwrap() {
                 "file_a" | "file_b" | "file_c" | "file_e" => {
                     assert!(utils::diff(&tp, &sp, &ff));
                     assert!(t.is_file());
@@ -496,11 +507,11 @@ mod test {
         let _ = d.merge();
 
         let mut count = 0;
-        for f in fs::read_dir(&tp).unwrap() {
-            let ff = f.unwrap();
-            let t = ff.file_type().unwrap();
+        for f in fs::read_dir(&tp).unwrap().flatten() {
+            let t = f.file_type().unwrap();
+            let ff = f.path();
             count += 1;
-            match ff.file_name().into_string().unwrap().as_str() {
+            match ff.file_name().unwrap().to_str().unwrap() {
                 "file_a" | "file_b" | "file_c" | "file_e" => {
                     assert!(!utils::diff(&tp, &sp, &ff));
                     assert!(t.is_file());
@@ -556,11 +567,11 @@ mod test {
         let _ = d.merge();
 
         let mut count = 0;
-        for f in fs::read_dir(&tp).unwrap() {
-            let ff = f.unwrap();
-            let t = ff.file_type().unwrap();
+        for f in fs::read_dir(&tp).unwrap().flatten() {
+            let t = f.file_type().unwrap();
+            let ff = f.path();
             count += 1;
-            match ff.file_name().into_string().unwrap().as_str() {
+            match ff.file_name().unwrap().to_str().unwrap() {
                 "file_b" | "file_c" | "file_e" => assert!(t.is_file()),
                 "dir_d" | "dir_f" => assert!(t.is_dir()),
                 _ => unreachable!(),

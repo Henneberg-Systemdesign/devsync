@@ -23,16 +23,16 @@ impl Flavour for Cmake {
 
     /// Look for file called 'CMakeCache.txt' to identify CMake build
     /// directory.
-    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour>> {
+    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour + Send + Sync>> {
         for d in &d.files {
-            if d.file_name() == "CMakeCache.txt" {
+            if d.file_name().unwrap() == "CMakeCache.txt" {
                 return Some(self.build());
             }
         }
         None
     }
 
-    fn build(&self) -> Box<dyn Flavour> {
+    fn build(&self) -> Box<dyn Flavour + Send + Sync> {
         Box::new(Cmake {
             dir: Box::new(None),
             ignore: self.ignore,
@@ -45,6 +45,10 @@ impl Flavour for Cmake {
 
     fn dir(&self) -> &Option<Dir> {
         &self.dir
+    }
+
+    fn dir_mut(&mut self) -> &mut Option<Dir> {
+        &mut self.dir
     }
 
     fn category(&self) -> Category {

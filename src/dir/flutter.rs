@@ -23,9 +23,10 @@ impl Flavour for Flutter {
 
     /// Look for file ending on .cache.dill.track.dill to identify
     /// Flutter build directory.
-    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour>> {
+    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour + Send + Sync>> {
         for f in &d.files {
             if f.file_name()
+                .unwrap()
                 .to_str()
                 .unwrap()
                 .ends_with(".cache.dill.track.dill")
@@ -36,7 +37,7 @@ impl Flavour for Flutter {
         None
     }
 
-    fn build(&self) -> Box<dyn Flavour> {
+    fn build(&self) -> Box<dyn Flavour + Send + Sync> {
         Box::new(Flutter {
             dir: Box::new(None),
             ignore: self.ignore,
@@ -49,6 +50,10 @@ impl Flavour for Flutter {
 
     fn dir(&self) -> &Option<Dir> {
         &self.dir
+    }
+
+    fn dir_mut(&mut self) -> &mut Option<Dir> {
+        &mut self.dir
     }
 
     fn category(&self) -> Category {
