@@ -39,14 +39,15 @@ impl Flavour for Yocto {
         }
     }
 
-    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour>> {
+    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour + Send + Sync>> {
         let mut m = RequiredFiles::NONE;
         for d in &d.dirs {
-            if d.file_name() == "bitbake" {
+            let f = d.file_name().unwrap();
+            if f == "bitbake" {
                 m |= RequiredFiles::BITBAKE;
-            } else if d.file_name().to_str().unwrap().starts_with("meta") {
+            } else if f.to_str().unwrap().starts_with("meta") {
                 m |= RequiredFiles::META;
-            } else if d.file_name() == "scripts" {
+            } else if f == "scripts" {
                 m |= RequiredFiles::SCRIPTS;
             }
             if m == RequiredFiles::ALL {
@@ -56,7 +57,7 @@ impl Flavour for Yocto {
         None
     }
 
-    fn build(&self) -> Box<dyn Flavour> {
+    fn build(&self) -> Box<dyn Flavour + Send + Sync> {
         Box::new(Yocto {
             dir: Box::new(None),
             ignore: self.ignore,
@@ -68,7 +69,11 @@ impl Flavour for Yocto {
     fn set_dir(&mut self, mut d: Dir) {
         // exclude downloads directory if exists
         if self.ignore_downloads {
-            if let Some(i) = d.dirs.iter().position(|e| e.file_name() == "downloads") {
+            if let Some(i) = d
+                .dirs
+                .iter()
+                .position(|e| e.file_name().unwrap() == "downloads")
+            {
                 d.dirs.swap_remove(i);
             }
         }
@@ -76,11 +81,12 @@ impl Flavour for Yocto {
         // exclude build directory if exists
         if self.ignore_build {
             d.dirs.retain(|e| {
-                e.file_name() != "build"
-                    && e.file_name() != "BUILD"
-                    && e.file_name() != "cache"
-                    && e.file_name() != "sstate-cache"
-                    && e.file_name() != "buildhistory"
+                let f = e.file_name().unwrap();
+                f != "build"
+                    && f != "BUILD"
+                    && f != "cache"
+                    && f != "sstate-cache"
+                    && f != "buildhistory"
             });
         }
 
@@ -88,7 +94,11 @@ impl Flavour for Yocto {
     }
 
     fn dir(&self) -> &Option<Dir> {
-        &*self.dir
+        &self.dir
+    }
+
+    fn dir_mut(&mut self) -> &mut Option<Dir> {
+        &mut self.dir
     }
 
     fn category(&self) -> Category {

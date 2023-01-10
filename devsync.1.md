@@ -36,12 +36,9 @@ skipped directory. The logs are dropped when a new session is started.
 # TERMINAL UI
 
 **devsync** can provide a simple terminal interface when started with
-'-u'. The ui has a progress bar which is of limited help because it
-only tells you about the number of directories that are already known
-and how many have been processed. However, it still moves forward most
-of the time and gives at least a hint that something is happening. The
-ui also shows you the backup jobs that are currently running and all
-runtime issues that happened along the way.
+'-u'. The ui has a progress bar and also shows you the backup jobs
+that are currently running and all runtime issues that happened along
+the way.
 
 It will remain active when the backup process has been completed and
 waits for a press on 'q' or 'Q' to terminate.

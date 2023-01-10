@@ -3,10 +3,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::fs;
-use std::fs::DirEntry;
 use std::io::Write;
 use std::option::Option;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use cfg_match::cfg_match;
 use log::trace;
@@ -80,8 +79,8 @@ pub fn create_dir_save(p: &Path, delete: bool) -> Result<(), SyncError> {
 /// filtered.
 pub fn save_dirs_and_files(
     p: &Path,
-    dirs: &mut Vec<DirEntry>,
-    files: &mut Vec<DirEntry>,
+    dirs: &mut Vec<PathBuf>,
+    files: &mut Vec<PathBuf>,
     filter: Option<&[String]>,
     owned: bool,
 ) -> Result<(), SyncError> {
@@ -108,9 +107,9 @@ pub fn save_dirs_and_files(
 
                 let t = e.file_type().unwrap();
                 if t.is_file() && e.file_name() != ARGS_FILE && e.file_name() != LOG_FILE {
-                    files.push(e);
+                    files.push(e.path());
                 } else if t.is_dir() && e.path() != p {
-                    dirs.push(e);
+                    dirs.push(e.path());
                 }
             }
             Err(_) => continue,
@@ -140,7 +139,7 @@ pub fn rm_dirs_and_files(p: &Path) -> Result<(), SyncError> {
 }
 
 /// Apply filter to directory entries vector.
-pub fn filter_dir_entries(a: &Vec<DirEntry>, b: &mut Vec<DirEntry>) {
+pub fn filter_dir_entries(a: &Vec<PathBuf>, b: &mut Vec<PathBuf>) {
     for e in a {
         if let Some(i) = b.iter().position(|p| p.file_name() == e.file_name()) {
             b.remove(i);
@@ -173,7 +172,7 @@ pub fn cp_r(s: &Path, t: &Path, f: &Path, archive: bool) -> Result<(), SyncError
 /// Copy file with relative path and create directory if needed.
 pub fn cp_r_d(s: &Path, t: &Path, f: &Path, archive: bool) -> Result<(), SyncError> {
     if let Some(p) = f.parent() {
-        fs::create_dir_all(&t.join(p))?;
+        fs::create_dir_all(t.join(p))?;
     }
     cp_r(s, t, f, archive)
 }
@@ -191,10 +190,9 @@ pub fn cp_d(s: &Path, t: &Path, f: &Path, archive: bool) -> Result<(), SyncError
 }
 
 /// Check if a file has changed by comparing the last-modified timestamps.
-pub fn diff(s: &Path, t: &Path, f: &DirEntry) -> bool {
-    let fp = f.path();
-    let p = fp.strip_prefix(s).unwrap();
-    let t = p.join(t).join(f.file_name());
+pub fn diff(s: &Path, t: &Path, f: &Path) -> bool {
+    let p = f.strip_prefix(s).unwrap();
+    let t = p.join(t).join(f.file_name().unwrap());
 
     trace!("Check diff of {:?} vs {:?}", s, t);
     match fs::metadata(t) {
@@ -324,8 +322,8 @@ mod test {
         let mut p = path();
         p.push("save_dirs_and_files");
         sample_dir(&p);
-        let mut f: Vec<DirEntry> = Vec::new();
-        let mut d: Vec<DirEntry> = Vec::new();
+        let mut f: Vec<PathBuf> = Vec::new();
+        let mut d: Vec<PathBuf> = Vec::new();
         let _ = save_dirs_and_files(&p, &mut d, &mut f, None, false);
         assert!(f.len() == 4);
         assert!(d.len() == 2);
@@ -371,10 +369,10 @@ mod test {
         let p = path();
         sample_dir(&p.join("filter_dir_entries_1"));
         sample_dir(&p.join("filter_dir_entries_2"));
-        let mut f1: Vec<DirEntry> = Vec::new();
-        let mut d1: Vec<DirEntry> = Vec::new();
-        let mut f2: Vec<DirEntry> = Vec::new();
-        let mut d2: Vec<DirEntry> = Vec::new();
+        let mut f1: Vec<PathBuf> = Vec::new();
+        let mut d1: Vec<PathBuf> = Vec::new();
+        let mut f2: Vec<PathBuf> = Vec::new();
+        let mut d2: Vec<PathBuf> = Vec::new();
         let _ = save_dirs_and_files(
             &p.join("filter_dir_entries_1"),
             &mut d1,
@@ -414,11 +412,10 @@ mod test {
             false,
         );
         assert!(p.join("cp_r_2").join("file_a").exists());
-        for f in fs::read_dir(p.join("cp_r_2")).unwrap() {
-            let ff = f.unwrap();
-            let t = ff.file_type().unwrap();
+        for f in fs::read_dir(p.join("cp_r_2")).unwrap().flatten() {
+            let t = f.file_type().unwrap();
             if t.is_file() {
-                assert!(diff(&p.join("cp_r_2"), &p.join("cp_r_1"), &ff));
+                assert!(diff(&p.join("cp_r_2"), &p.join("cp_r_1"), &f.path()));
             }
         }
 
@@ -429,11 +426,10 @@ mod test {
             true,
         );
         assert!(p.join("cp_r_2").join("file_a").exists());
-        for f in fs::read_dir(p.join("cp_r_2")).unwrap() {
-            let ff = f.unwrap();
-            let t = ff.file_type().unwrap();
+        for f in fs::read_dir(p.join("cp_r_2")).unwrap().flatten() {
+            let t = f.file_type().unwrap();
             if t.is_file() {
-                assert!(!diff(&p.join("cp_r_2"), &p.join("cp_r_1"), &ff));
+                assert!(!diff(&p.join("cp_r_2"), &p.join("cp_r_1"), &f.path()));
             }
         }
 

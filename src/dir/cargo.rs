@@ -23,16 +23,16 @@ impl Flavour for Cargo {
 
     /// Look for file called 'CACHEDIR.TAG' to identify Cargo build
     /// directory.
-    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour>> {
+    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour + Send + Sync>> {
         for d in &d.files {
-            if d.file_name() == "CACHEDIR.TAG" {
+            if d.file_name().unwrap() == "CACHEDIR.TAG" {
                 return Some(self.build());
             }
         }
         None
     }
 
-    fn build(&self) -> Box<dyn Flavour> {
+    fn build(&self) -> Box<dyn Flavour + Send + Sync> {
         Box::new(Cargo {
             dir: Box::new(None),
             ignore: self.ignore,
@@ -44,7 +44,11 @@ impl Flavour for Cargo {
     }
 
     fn dir(&self) -> &Option<Dir> {
-        &*self.dir
+        &self.dir
+    }
+
+    fn dir_mut(&mut self) -> &mut Option<Dir> {
+        &mut self.dir
     }
 
     fn category(&self) -> Category {

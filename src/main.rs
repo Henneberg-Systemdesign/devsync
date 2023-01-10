@@ -186,7 +186,7 @@ fn main() {
 
     let mut stats = stats::Stats::default();
     let scanner = Scanner::new(&args, &src, &target, &stats, cfg.clone());
-    let mut log_file = fs::File::create(&target.join(LOG_FILE)).expect("Cannot create log file");
+    let mut log_file = fs::File::create(target.join(LOG_FILE)).expect("Cannot create log file");
 
     let stats_th = if args.opt_present("u") {
         let mut ui = ui::TermUi::new(stats, cfg).unwrap();
@@ -198,10 +198,14 @@ fn main() {
         thread::spawn(move || loop {
             if let Ok(t) = stats.chn.1.recv() {
                 match stats.process(&t) {
-                    stats::Command::Complete => break,
-                    stats::Command::Job => {
-                        info!("Stats: Job {:?} on {:?}", t.val, &t.info)
+                    stats::Command::Complete => {
+                        info!("Stats: Processing of source directory completed");
+                        break;
                     }
+                    stats::Command::ScanComplete => {
+                        info!("Stats: Scanning of source directory completed")
+                    }
+                    stats::Command::Job => info!("Stats: Job {:?} on {:?}", t.val, &t.info),
                     stats::Command::Log => {
                         utils::log_stats_info(&mut log_file, "Log from flavour", &t.info.unwrap())
                     }

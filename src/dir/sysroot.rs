@@ -37,18 +37,19 @@ impl Flavour for Sysroot {
 
     /// Look for directories 'dev', 'usr', 'var' and 'bin' to identify
     /// Sysroot directory.
-    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour>> {
+    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour + Send + Sync>> {
         let mut m = RequiredFiles::NONE;
         for d in &d.dirs {
-            if d.file_name() == "bin" {
+            let f = d.file_name().unwrap();
+            if f == "bin" {
                 m |= RequiredFiles::BIN;
-            } else if d.file_name() == "etc" {
+            } else if f == "etc" {
                 m |= RequiredFiles::ETC;
-            } else if d.file_name() == "lib" {
+            } else if f == "lib" {
                 m |= RequiredFiles::LIB;
-            } else if d.file_name() == "usr" {
+            } else if f == "usr" {
                 m |= RequiredFiles::USR;
-            } else if d.file_name() == "var" {
+            } else if f == "var" {
                 m |= RequiredFiles::VAR;
             }
 
@@ -59,7 +60,7 @@ impl Flavour for Sysroot {
         None
     }
 
-    fn build(&self) -> Box<dyn Flavour> {
+    fn build(&self) -> Box<dyn Flavour + Send + Sync> {
         Box::new(Sysroot {
             dir: Box::new(None),
             ignore: self.ignore,
@@ -71,7 +72,11 @@ impl Flavour for Sysroot {
     }
 
     fn dir(&self) -> &Option<Dir> {
-        &*self.dir
+        &self.dir
+    }
+
+    fn dir_mut(&mut self) -> &mut Option<Dir> {
+        &mut self.dir
     }
 
     fn category(&self) -> Category {

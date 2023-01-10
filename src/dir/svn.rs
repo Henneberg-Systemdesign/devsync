@@ -13,7 +13,7 @@ use xml::reader::XmlEvent;
 use xml::EventReader;
 
 use super::utils::SyncError;
-use super::{utils, Category, Dir, Flavour, SyncMethod};
+use super::{utils, Category, Dir, Flavour};
 
 pub struct Svn {
     dir: Box<Option<Dir>>,
@@ -70,7 +70,7 @@ impl Svn {
         if p.exists() {
             fs::remove_dir_all(p)?;
         }
-        fs::File::create(&d.target_path.as_path().join(&format!("{}.{}", n, s)))?;
+        fs::File::create(d.target_path.as_path().join(format!("{}.{}", n, s)))?;
         Ok(())
     }
 
@@ -205,7 +205,7 @@ impl Svn {
                                             continue;
                                         }
                                         let dirs = &mut self.dir_unchecked_mut().dirs;
-                                        dirs.push(e);
+                                        dirs.push(e.path());
                                     }
                                 } else {
                                     self.unversioned.push(f.clone());
@@ -301,9 +301,9 @@ impl Flavour for Svn {
     }
 
     /// Look for file '.svn' to identify Subversion directory.
-    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour>> {
+    fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour + Send + Sync>> {
         for d in &d.dirs {
-            if d.file_name() == ".svn" {
+            if d.file_name().unwrap() == ".svn" {
                 return Some(Box::new(Svn {
                     dir: Box::new(None),
                     ignore: self.ignore,
@@ -319,7 +319,7 @@ impl Flavour for Svn {
         None
     }
 
-    fn build(&self) -> Box<dyn Flavour> {
+    fn build(&self) -> Box<dyn Flavour + Send + Sync> {
         Box::new(Svn {
             dir: Box::new(None),
             ignore: self.ignore,
@@ -337,7 +337,11 @@ impl Flavour for Svn {
     }
 
     fn dir(&self) -> &Option<Dir> {
-        &*self.dir
+        &self.dir
+    }
+
+    fn dir_mut(&mut self) -> &mut Option<Dir> {
+        &mut self.dir
     }
 
     fn name(&self) -> &'static str {
@@ -364,7 +368,7 @@ impl Flavour for Svn {
 
     /// Prepare for backup. Default implementations simply creates the
     /// target directory.
-    fn prepare(&mut self) -> Result<SyncMethod, SyncError> {
+    fn prepare(&mut self) -> Result<(), SyncError> {
         if self.dir().is_some() {
             if !self.full {
                 if self.probed {
@@ -373,8 +377,7 @@ impl Flavour for Svn {
                     self.modify_target_path()?;
                 }
             }
-            let m = self.dir_unchecked().ensure_target_path()?;
-            Ok(m)
+            self.dir_unchecked_mut().ensure_target_path()
         } else {
             Err(SyncError::Failed(
                 "Cannot prepare synchronization without directory".to_string(),

@@ -19,11 +19,11 @@ impl Flavour for Simple {
     }
 
     /// No probing, just return constructed flavour.
-    fn probe(&self, _d: &Dir) -> Option<Box<dyn Flavour>> {
+    fn probe(&self, _d: &Dir) -> Option<Box<dyn Flavour + Send + Sync>> {
         Some(self.build())
     }
 
-    fn build(&self) -> Box<dyn Flavour> {
+    fn build(&self) -> Box<dyn Flavour + Send + Sync> {
         Box::new(Simple {
             dir: Box::new(None),
         })
@@ -38,6 +38,10 @@ impl Flavour for Simple {
     }
 
     fn dir(&self) -> &Option<Dir> {
-        &*self.dir
+        &self.dir
+    }
+
+    fn dir_mut(&mut self) -> &mut Option<Dir> {
+        &mut self.dir
     }
 }
