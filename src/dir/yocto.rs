@@ -14,12 +14,13 @@ pub struct Yocto {
 }
 
 bitflags! {
+    #[derive(PartialEq)]
     struct RequiredFiles: u8 {
         const NONE = 0;
         const BITBAKE = 1;
         const META = 2;
         const SCRIPTS = 4;
-        const ALL = Self::BITBAKE.bits | Self::META.bits | Self::SCRIPTS.bits;
+        const ALL = Self::BITBAKE.bits() | Self::META.bits() | Self::SCRIPTS.bits();
     }
 }
 

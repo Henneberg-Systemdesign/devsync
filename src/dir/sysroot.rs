@@ -12,6 +12,7 @@ pub struct Sysroot {
 }
 
 bitflags! {
+    #[derive(PartialEq)]
     struct RequiredFiles: u8 {
         const NONE = 0;
         const BIN = 0x01;
@@ -19,7 +20,7 @@ bitflags! {
         const LIB = 0x04;
         const USR = 0x08;
         const VAR = 0x10;
-        const ALL = Self::BIN.bits | Self::ETC.bits | Self::LIB.bits | Self::USR.bits | Self::VAR.bits;
+        const ALL = Self::BIN.bits() | Self::ETC.bits() | Self::LIB.bits() | Self::USR.bits() | Self::VAR.bits();
     }
 }
 

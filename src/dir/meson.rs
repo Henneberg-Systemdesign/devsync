@@ -12,12 +12,13 @@ pub struct Meson {
 }
 
 bitflags! {
+    #[derive(PartialEq)]
     struct RequiredFiles: u8 {
         const NONE = 0;
         const INFO = 1;
         const LOGS = 2;
         const PRIV = 4;
-        const ALL = Self::INFO.bits | Self::LOGS.bits | Self::PRIV.bits;
+        const ALL = Self::INFO.bits() | Self::LOGS.bits() | Self::PRIV.bits();
     }
 }
 
