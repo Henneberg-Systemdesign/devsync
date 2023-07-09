@@ -258,7 +258,7 @@ impl Git {
         Ok(())
     }
 
-    /// Run all duplicate setps.
+    /// Run all duplicate steps.
     fn dup_all(&self) -> Result<(), SyncError> {
         if let Some(d) = self.dir() {
             utils::rm_dirs_and_files(d.target_path.as_path())?;
@@ -317,7 +317,7 @@ impl Flavour for Git {
         }
     }
 
-    /// Probe for '.git' file to identify Git repository.
+    /// Probe for '.git' directory to identify Git repository.
     fn probe(&self, d: &Dir) -> Option<Box<dyn Flavour + Send + Sync>> {
         for d in &d.dirs {
             if d.file_name().unwrap() == ".git" {
