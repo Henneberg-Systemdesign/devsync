@@ -152,6 +152,13 @@ pub fn cp_r(s: &Path, t: &Path, f: &Path, archive: bool) -> Result<(), SyncError
     let sf = s.join(f);
     let tf = t.join(f);
 
+    if !fs::symlink_metadata(&sf)?.is_file() {
+        return Err(SyncError::Failed(format!(
+            "Path {:?} is not a regular file",
+            sf
+        )));
+    }
+
     trace!("Copying {:?} to {:?}", sf, tf);
     match fs::copy(&sf, &tf) {
         Err(_) => Err(SyncError::Failed(format!(
