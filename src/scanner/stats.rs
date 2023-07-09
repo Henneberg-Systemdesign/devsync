@@ -147,6 +147,6 @@ impl Stats {
     }
 
     fn proc_complete(&self) -> bool {
-        self.todo == self.done + self.error
+        self.todo == self.done + self.error + self.skipped
     }
 }
