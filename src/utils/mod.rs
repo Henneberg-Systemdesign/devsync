@@ -245,7 +245,7 @@ pub fn test_file_owned(f: &Path) -> Result<bool, SyncError> {
     }
 }
 
-#[cfg(all(unix))]
+#[cfg(unix)]
 use std::os::unix::fs::MetadataExt;
 fn test_file_owned_unix(f: &Path) -> Result<bool, SyncError> {
     let file_uid = fs::metadata(f)?.uid();
